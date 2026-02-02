@@ -39,6 +39,22 @@ const messageSchema = new mongoose.Schema(
         ref: 'User',
       },
     ],
+    isEdited: {
+      type: Boolean,
+      default: false,
+    },
+    editedAt: {
+      type: Date,
+      default: null,
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
     createdAt: {
       type: Date,
       default: Date.now,
@@ -47,5 +63,9 @@ const messageSchema = new mongoose.Schema(
   },
   { timestamps: false }
 );
+
+// TTL Index: Auto-delete messages after 30 days (2592000 seconds)
+// Documents with createdAt older than 30 days will be automatically deleted
+messageSchema.index({ createdAt: 1 }, { expireAfterSeconds: 2592000 });
 
 module.exports = mongoose.model('Message', messageSchema);

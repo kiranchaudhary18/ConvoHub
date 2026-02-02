@@ -40,4 +40,8 @@ const chatSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// TTL Index: Auto-delete chats after 30 days (2592000 seconds)
+// Documents with createdAt older than 30 days will be automatically deleted
+chatSchema.index({ createdAt: 1 }, { expireAfterSeconds: 2592000 });
+
 module.exports = mongoose.model('Chat', chatSchema);

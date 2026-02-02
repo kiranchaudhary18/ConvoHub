@@ -307,10 +307,149 @@ const uploadFile = async (req, res) => {
   }
 };
 
+// @desc    Edit message (only text, only once)
+// @route   PUT /api/messages/:messageId
+// @access  Private
+const editMessage = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const { text } = req.body;
+    const userId = req.user.id;
+
+    if (!text || text.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        message: 'Message text is required',
+      });
+    }
+
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return res.status(404).json({
+        success: false,
+        message: 'Message not found',
+      });
+    }
+
+    // Only sender can edit
+    if (message.senderId.toString() !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only edit your own messages',
+      });
+    }
+
+    // Can only edit once
+    if (message.isEdited) {
+      return res.status(400).json({
+        success: false,
+        message: 'Message can only be edited once',
+      });
+    }
+
+    // Update message
+    message.text = text.trim();
+    message.isEdited = true;
+    message.editedAt = new Date();
+    await message.save();
+
+    const populatedMessage = await message.populate('senderId', '-password');
+
+    const responseData = {
+      _id: message._id,
+      chatId: message.chatId,
+      senderId: populatedMessage.senderId,
+      text: message.text,
+      type: message.type,
+      seenBy: message.seenBy,
+      isEdited: message.isEdited,
+      editedAt: message.editedAt,
+      createdAt: message.createdAt,
+    };
+
+    // Emit socket event for real-time update
+    const io = req.app.get('io');
+    if (io) {
+      io.to(message.chatId.toString()).emit('message-edited', responseData);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Message edited',
+      data: responseData,
+    });
+  } catch (error) {
+    console.error('Edit message error:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Delete message
+// @route   DELETE /api/messages/:messageId
+// @access  Private
+const deleteMessage = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const userId = req.user.id;
+
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return res.status(404).json({
+        success: false,
+        message: 'Message not found',
+      });
+    }
+
+    // Only sender can delete
+    if (message.senderId.toString() !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only delete your own messages',
+      });
+    }
+
+    // Mark as deleted
+    message.isDeleted = true;
+    message.deletedAt = new Date();
+    message.text = 'This message was deleted';
+    await message.save();
+
+    const responseData = {
+      _id: message._id,
+      chatId: message.chatId,
+      isDeleted: true,
+      deletedAt: message.deletedAt,
+    };
+
+    // Emit socket event for real-time update
+    const io = req.app.get('io');
+    if (io) {
+      io.to(message.chatId.toString()).emit('message-deleted', responseData);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Message deleted',
+      data: responseData,
+    });
+  } catch (error) {
+    console.error('Delete message error:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   sendMessage,
   getMessages,
   markMessageAsSeen,
   markAllMessagesAsSeen,
   uploadFile,
+  editMessage,
+  deleteMessage,
 };

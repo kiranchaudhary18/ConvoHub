@@ -4,6 +4,7 @@ const socketIO = require('socket.io');
 const app = require('./src/app');
 const connectDB = require('./src/config/db');
 const { initializeSocket } = require('./src/socket/socket');
+const { setupCleanupJob } = require('./src/utils/cleanup');
 
 // Get port from environment or use default
 const PORT = process.env.PORT || 5000;
@@ -27,6 +28,9 @@ initializeSocket(io);
 
 // Connect to MongoDB
 connectDB();
+
+// Setup automated cleanup job (backup to TTL indexes)
+setupCleanupJob();
 
 // Start server
 server.listen(PORT, () => {

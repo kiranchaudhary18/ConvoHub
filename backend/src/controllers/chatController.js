@@ -126,6 +126,22 @@ const getAllChats = async (req, res) => {
       .populate('admin', '-password')
       .sort({ updatedAt: -1 });
 
+    // Debug: Log first chat structure
+    if (chats.length > 0) {
+      console.log('getAllChats Debug - First chat:', {
+        chatId: chats[0]._id,
+        isGroup: chats[0].isGroup,
+        memberCount: chats[0].members?.length,
+        firstMember: chats[0].members?.[0] ? {
+          _id: chats[0].members[0]._id,
+          name: chats[0].members[0].name,
+          email: chats[0].members[0].email,
+          type: typeof chats[0].members[0],
+          keys: Object.keys(chats[0].members[0] || {}).slice(0, 5)
+        } : null
+      });
+    }
+
     return res.status(200).json({
       success: true,
       count: chats.length,

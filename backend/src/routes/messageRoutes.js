@@ -6,6 +6,8 @@ const {
   markMessageAsSeen,
   markAllMessagesAsSeen,
   uploadFile,
+  editMessage,
+  deleteMessage,
 } = require('../controllers/messageController');
 
 const router = express.Router();
@@ -37,5 +39,15 @@ router.put('/:messageId/mark-seen', markMessageAsSeen);
 // @desc    Mark all messages in chat as seen
 // @access  Private
 router.put('/chat/:chatId/mark-all-seen', markAllMessagesAsSeen);
+
+// @route   PUT /api/messages/:messageId/edit
+// @desc    Edit message (only once)
+// @access  Private
+router.put('/:messageId/edit', editMessage);
+
+// @route   DELETE /api/messages/:messageId
+// @desc    Delete message
+// @access  Private
+router.delete('/:messageId', deleteMessage);
 
 module.exports = router;

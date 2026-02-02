@@ -75,14 +75,10 @@ const initializeSocket = (io) => {
           io.to(chatId).emit('receive-message', {
             _id: message._id,
             chatId,
-            sender: {
-              _id: populatedMessage.senderId._id,
-              name: populatedMessage.senderId.name,
-              email: populatedMessage.senderId.email,
-              avatar: populatedMessage.senderId.avatar,
-            },
+            senderId: populatedMessage.senderId,
             text,
-            seenBy: [userId],
+            type: 'text',
+            seenBy: populatedMessage.seenBy,
             createdAt: message.createdAt,
           });
         } catch (error) {
@@ -129,6 +125,18 @@ const initializeSocket = (io) => {
           userId,
           chatId,
         });
+      });
+
+      // Handle message edited
+      socket.on('message-edited', (data) => {
+        const { chatId, messageId } = data;
+        io.to(chatId).emit('message-edited', data);
+      });
+
+      // Handle message deleted
+      socket.on('message-deleted', (data) => {
+        const { chatId, messageId } = data;
+        io.to(chatId).emit('message-deleted', data);
       });
 
       // ============ CHAT ROOM EVENTS ============
