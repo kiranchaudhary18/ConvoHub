@@ -69,6 +69,15 @@ app.use((req, res, next) => {
 
 // ============ ROUTES ============
 
+// Root endpoint
+app.get('/', (req, res) => {
+  return res.status(200).json({
+    success: true,
+    message: 'ConvoHub backend is running',
+    timestamp: new Date(),
+  });
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/chats', chatRoutes);
