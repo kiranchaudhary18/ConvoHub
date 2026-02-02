@@ -1,13 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: "export",          // ✅ MUST for Render static site
   reactStrictMode: true,
-  swcMinify: true,
-  distDir: 'dist',
+
   images: {
+    unoptimized: true,       // ✅ static export fix
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: '**',
+        protocol: "https",
+        hostname: "**",
       },
     ],
   },
