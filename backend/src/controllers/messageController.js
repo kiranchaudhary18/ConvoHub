@@ -1,6 +1,7 @@
 const Message = require('../models/Message');
 const Chat = require('../models/Chat');
 const User = require('../models/User');
+const cloudinary = require('cloudinary').v2;
 
 // @desc    Send message
 // @route   POST /api/messages
@@ -243,19 +244,46 @@ const uploadFile = async (req, res) => {
     const fileName = req.file.originalname;
     const mimeType = req.file.mimetype;
     
-    // Convert file buffer to base64 data URL
-    const base64Data = req.file.buffer.toString('base64');
-    const fileUrl = `data:${mimeType};base64,${base64Data}`;
-
     // Determine file type
     const isImage = mimeType.startsWith('image/');
     const fileType = isImage ? 'image' : 'file';
 
-    // Create message
+    // Upload to Cloudinary
+    let fileUrl;
+    try {
+      const uploadResult = await new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            resource_type: 'auto',
+            folder: 'convohub/messages',
+            public_id: `${Date.now()}_${fileName.split('.')[0]}`,
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+        uploadStream.end(req.file.buffer);
+      });
+      
+      fileUrl = uploadResult.secure_url;
+    } catch (cloudinaryError) {
+      console.error('Cloudinary upload error:', cloudinaryError.message);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to upload file to Cloudinary',
+        error: cloudinaryError.message,
+      });
+    }
+
+    // Create message with Cloudinary URL
+    const { caption } = req.body;
+    const messageText = caption?.trim() ? caption : `📎 ${fileName}`;
+
     const message = await Message.create({
       chatId,
       senderId,
-      text: `📎 ${fileName}`,
+      text: messageText,
       fileUrl,
       fileName,
       type: fileType,
@@ -295,7 +323,7 @@ const uploadFile = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: 'File uploaded',
+      message: 'File uploaded successfully',
       data: responseData,
     });
   } catch (error) {
