@@ -30,9 +30,3 @@ export default function RegisterPage() {
     </Suspense>
   );
 }
-
-  useEffect(() => {
-    if (user) {
-      router.push('/chat');
-    }
-  }, [user, router]);
