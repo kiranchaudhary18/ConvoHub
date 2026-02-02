@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useChatStore } from '@/stores/chatStore';
+import { useAuthStore } from '@/stores/authStore';
 import { motion } from 'framer-motion';
 import ChatHeader from './ChatHeader';
 import MessageList from './MessageList';
@@ -10,7 +11,8 @@ import { getSocket, initializeSocket, onEvent, offEvent } from '@/lib/socket';
 import api from '@/lib/api';
 
 export default function ChatWindow() {
-  const { activeChat, messages, setMessages, addMessage } = useChatStore();
+  const { activeChat, messages, setMessages, addMessage, updateMessage, deleteMessage } = useChatStore();
+  const { user: currentUser } = useAuthStore();
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -45,17 +47,48 @@ export default function ChatWindow() {
         }
       };
 
+      const handleMessageEdited = (data) => {
+        if (data.chatId === activeChat) {
+          updateMessage(activeChat, data._id, data);
+        }
+      };
+
+      const handleMessageDeleted = (data) => {
+        if (data.chatId === activeChat) {
+          deleteMessage(activeChat, data._id);
+        }
+      };
+
+      // Listen for user status changes
+      const handleUserOnline = (data) => {
+        // Trigger a refetch of chats to update user status
+        console.log('User online:', data.userId);
+      };
+
+      const handleUserOffline = (data) => {
+        // Trigger a refetch of chats to update user status
+        console.log('User offline:', data.userId);
+      };
+
       // Listen for both events for compatibility
       onEvent('receive-message', handleNewMessage);
       onEvent('new-message', handleNewMessage);
+      onEvent('message-edited', handleMessageEdited);
+      onEvent('message-deleted', handleMessageDeleted);
+      onEvent('user-online', handleUserOnline);
+      onEvent('user-offline', handleUserOffline);
 
       return () => {
         socket.emit('leave-chat', activeChat);
         offEvent('receive-message', handleNewMessage);
         offEvent('new-message', handleNewMessage);
+        offEvent('message-edited', handleMessageEdited);
+        offEvent('message-deleted', handleMessageDeleted);
+        offEvent('user-online', handleUserOnline);
+        offEvent('user-offline', handleUserOffline);
       };
     }
-  }, [activeChat, setMessages, addMessage]);
+  }, [activeChat, setMessages, addMessage, updateMessage, deleteMessage]);
 
   if (!activeChat) {
     return (

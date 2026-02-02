@@ -36,6 +36,31 @@ export const formatDate = (date) => {
   }
 };
 
+export const formatLastSeen = (date) => {
+  if (!date) return 'unknown';
+  
+  const now = new Date();
+  const lastSeen = new Date(date);
+  const diffTime = Math.abs(now - lastSeen);
+  const diffMinutes = Math.floor(diffTime / (1000 * 60));
+  const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffMinutes < 1) {
+    return 'just now';
+  } else if (diffMinutes < 60) {
+    return `${diffMinutes}m ago`;
+  } else if (diffHours < 24) {
+    return `${diffHours}h ago`;
+  } else if (diffDays === 1) {
+    return 'yesterday at ' + lastSeen.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  } else if (diffDays < 7) {
+    return lastSeen.toLocaleDateString('en-US', { weekday: 'short' }) + ' at ' + lastSeen.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  } else {
+    return lastSeen.toLocaleDateString('en-US');
+  }
+};
+
 export const truncateMessage = (message, length = 50) => {
   return message.length > length ? message.substring(0, length) + '...' : message;
 };

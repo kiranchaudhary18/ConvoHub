@@ -4,19 +4,64 @@ import { useEffect, useState } from 'react';
 import { useChatStore } from '@/stores/chatStore';
 import { useAuthStore } from '@/stores/authStore';
 import { motion } from 'framer-motion';
-import { Phone, Video, Info, MoreVertical } from 'lucide-react';
-import { getInitials } from '@/lib/utils';
+import { getInitials, formatLastSeen } from '@/lib/utils';
 
 export default function ChatHeader({ chatId }) {
-  const { chats } = useChatStore();
-  const chat = (chats || []).find((c) => c._id === chatId);
+  const { chats, activeChat } = useChatStore();
   const { user: currentUser } = useAuthStore();
+  const [headerData, setHeaderData] = useState(null);
 
-  if (!chat) return null;
+  useEffect(() => {
+    // Get the current chat
+    const chat = (chats || []).find((c) => c._id === chatId);
+    
+    if (!chat) {
+      setHeaderData(null);
+      return;
+    }
 
-  const otherUser = chat.isGroup ? null : chat.members.find((m) => m._id !== currentUser?._id);
-  const displayName = chat.isGroup ? chat.name : otherUser?.name;
-  const isOnline = otherUser?.isOnline;
+    // For one-to-one chats, find the other user (not the current user)
+    const otherUser = chat.isGroup ? null : chat.members.find((m) => m._id !== currentUser?._id);
+    
+    // Debug log
+    console.log('ChatHeader Debug:', {
+      chatId,
+      activeChat,
+      chatFound: !!chat,
+      isGroup: chat?.isGroup,
+      members: chat?.members?.map(m => ({ _id: m._id, name: m.name })),
+      currentUserId: currentUser?._id,
+      otherUser: otherUser ? { _id: otherUser._id, name: otherUser.name } : null
+    });
+
+    // Set header data
+    const displayName = chat.isGroup ? chat.name : (otherUser?.name || 'User');
+    const displayAvatar = displayName || 'CH';
+    const isOnline = otherUser?.isOnline ?? false;
+    const lastSeen = otherUser?.lastSeen;
+
+    setHeaderData({
+      displayName,
+      displayAvatar,
+      isOnline,
+      lastSeen,
+      isGroup: chat.isGroup,
+      memberCount: chat.members?.length
+    });
+  }, [chatId, chats, currentUser]);
+  
+  const getStatusText = () => {
+    if (!headerData) return '';
+    if (headerData.isGroup) {
+      return `${headerData.memberCount} members`;
+    }
+    if (headerData.isOnline) {
+      return '🟢 Online';
+    }
+    return `⚪ Last seen ${formatLastSeen(headerData.lastSeen)}`;
+  };
+
+  if (!headerData) return null;
 
   return (
     <motion.div
@@ -26,49 +71,14 @@ export default function ChatHeader({ chatId }) {
     >
       <div className="flex items-center gap-3">
         <div className="w-12 h-12 rounded-full bg-gradient-primary text-white flex items-center justify-center font-bold">
-          {getInitials(displayName || 'CH')}
+          {getInitials(headerData.displayAvatar)}
         </div>
         <div>
-          <h2 className="font-bold text-lg">{displayName}</h2>
+          <h2 className="font-bold text-lg">{headerData.displayName}</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            {chat.isGroup
-              ? `${chat.members.length} members`
-              : isOnline
-              ? '🟢 Online'
-              : '⚪ Offline'}
+            {getStatusText()}
           </p>
         </div>
-      </div>
-
-      <div className="flex items-center gap-2">
-        <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition"
-        >
-          <Phone size={20} />
-        </motion.button>
-        <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition"
-        >
-          <Video size={20} />
-        </motion.button>
-        <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition"
-        >
-          <Info size={20} />
-        </motion.button>
-        <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition"
-        >
-          <MoreVertical size={20} />
-        </motion.button>
       </div>
     </motion.div>
   );

@@ -39,6 +39,18 @@ export const useChatStore = create((set) => ({
       },
     })),
 
+  deleteMessage: (chatId, messageId) =>
+    set((state) => ({
+      messages: {
+        ...state.messages,
+        [chatId]: state.messages[chatId].map((msg) =>
+          msg._id === messageId 
+            ? { ...msg, isDeleted: true, text: 'This message was deleted' }
+            : msg
+        ),
+      },
+    })),
+
   setActiveChat: (chatId) => set({ activeChat: chatId }),
 
   setSelectedUsers: (users) => set({ selectedUsers: users }),

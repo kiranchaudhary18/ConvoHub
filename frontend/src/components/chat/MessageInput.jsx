@@ -6,14 +6,19 @@ import { Send, Smile, Paperclip } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { useChatStore } from '@/stores/chatStore';
+import { useAuthStore } from '@/stores/authStore';
 import { emitEvent, getSocket } from '@/lib/socket';
+import EmojiPicker from 'emoji-picker-react';
 
 export default function MessageInput({ chatId }) {
   const [message, setMessage] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const { addMessage } = useChatStore();
+  const { user: currentUser } = useAuthStore();
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
+  const emojiPickerRef = useRef(null);
 
   const handleSend = async (e) => {
     e.preventDefault();
@@ -26,22 +31,18 @@ export default function MessageInput({ chatId }) {
         type: 'text',
       });
 
+      console.log('📤 Message sent:', {
+        response: response.data,
+        currentUser,
+        chatId
+      });
+
       addMessage(chatId, response.data.data);
       setMessage('');
-
-      // Note: Message is already saved via REST API, so we don't need to emit Socket.IO event
-      // The server will handle broadcasting to other connected users
-      // const socket = getSocket();
-      // if (socket) {
-      //   emitEvent('send-message', {
-      //     chatId,
-      //     text: message,
-      //   });
-      // }
-
       inputRef.current?.focus();
     } catch (error) {
       toast.error('Failed to send message');
+      console.error('Send message error:', error);
     }
   };
 
@@ -50,6 +51,12 @@ export default function MessageInput({ chatId }) {
     if (socket) {
       emitEvent('typing', { chatId });
     }
+  };
+
+  const handleEmojiClick = (emojiObject) => {
+    setMessage((prevMessage) => prevMessage + emojiObject.emoji);
+    inputRef.current?.focus();
+    setShowEmojiPicker(false);
   };
 
   const handleFileSelect = async (e) => {
@@ -88,7 +95,35 @@ export default function MessageInput({ chatId }) {
       onSubmit={handleSend}
       className="border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800"
     >
+      {/* Emoji Picker */}
+      {showEmojiPicker && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 10 }}
+          ref={emojiPickerRef}
+          className="absolute bottom-24 left-4 z-50"
+        >
+          <EmojiPicker
+            onEmojiClick={handleEmojiClick}
+            theme="dark"
+            lazyLoadEmojis={true}
+          />
+        </motion.div>
+      )}
+
       <div className="flex items-end gap-3">
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          type="button"
+          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+          className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition flex-shrink-0"
+          title="Add emoji"
+        >
+          <Smile size={20} className={showEmojiPicker ? 'text-yellow-500' : ''} />
+        </motion.button>
+
         <motion.button
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
@@ -129,14 +164,6 @@ export default function MessageInput({ chatId }) {
             placeholder="Type a message..."
             className="flex-1 bg-transparent outline-none dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
           />
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            type="button"
-            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition ml-2"
-          >
-            <Smile size={20} />
-          </motion.button>
         </div>
 
         <motion.button

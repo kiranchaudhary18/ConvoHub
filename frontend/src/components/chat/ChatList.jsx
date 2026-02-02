@@ -10,6 +10,46 @@ export default function ChatList({ searchQuery, showGroups = false }) {
   const { chats, activeChat, setActiveChat } = useChatStore();
   const { user: currentUser } = useAuthStore();
 
+  // Debug log
+  if (chats && chats.length > 0) {
+    console.log('ChatList Debug - First chat members:', {
+      chatId: chats[0]._id,
+      isGroup: chats[0].isGroup,
+      memberCount: chats[0].members?.length,
+      members: chats[0].members?.map(m => ({
+        _id: m._id,
+        name: m.name,
+        type: typeof m,
+        isString: typeof m === 'string'
+      })),
+      currentUserId: currentUser?._id,
+      currentUserName: currentUser?.name
+    });
+  }
+
+  const getOtherMember = (chat) => {
+    if (chat.isGroup) return null;
+    
+    // Handle case where members might be IDs (strings) or objects
+    const members = chat.members || [];
+    
+    for (let member of members) {
+      const memberId = typeof member === 'object' && member?._id ? member._id : member;
+      
+      // If this is not the current user, return them
+      if (memberId !== currentUser?._id) {
+        // Return the member object if available, otherwise create one from the ID
+        if (typeof member === 'object' && member?._id) {
+          return member;
+        } else {
+          return { _id: memberId, name: 'User' };
+        }
+      }
+    }
+    
+    return null;
+  };
+
   // Filter chats based on type (groups or one-to-one)
   const filteredChats = (chats || []).filter((chat) => {
     // Filter by group type
@@ -22,17 +62,12 @@ export default function ChatList({ searchQuery, showGroups = false }) {
       name = chat.name || 'Group';
     } else {
       // Find the other member (not current user)
-      const otherMember = chat.members?.find(m => m._id !== currentUser?._id);
+      const otherMember = getOtherMember(chat);
       name = otherMember?.name || 'Unknown';
     }
     
     return name.toLowerCase().includes(searchQuery.toLowerCase());
   });
-
-  const getOtherMember = (chat) => {
-    if (chat.isGroup) return null;
-    return chat.members?.find(m => m._id !== currentUser?._id);
-  };
 
   return (
     <div className="space-y-2 p-4">

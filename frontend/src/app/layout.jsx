@@ -14,8 +14,10 @@ export default function RootLayout({ children }) {
   const router = useRouter();
 
   useEffect(() => {
+    // Load user from localStorage on mount
     loadFromStorage();
-  }, [loadFromStorage]);
+    console.log('🔐 Loading auth from storage');
+  }, []);
 
   return (
     <html lang="en" className={darkMode ? 'dark' : ''}>
