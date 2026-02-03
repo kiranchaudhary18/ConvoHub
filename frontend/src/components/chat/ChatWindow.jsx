@@ -7,7 +7,7 @@ import { motion } from 'framer-motion';
 import ChatHeader from './ChatHeader';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
-import { getSocket, initializeSocket, onEvent, offEvent } from '@/lib/socket';
+import { getSocket, initializeSocket } from '@/lib/socket';
 import api from '@/lib/api';
 
 export default function ChatWindow() {
@@ -41,6 +41,7 @@ export default function ChatWindow() {
       // Join the chat room
       socket.emit('join-chat', activeChat);
 
+      // Create handler functions with activeChat in closure
       const handleNewMessage = (message) => {
         if (message.chatId === activeChat) {
           addMessage(activeChat, message);
@@ -59,33 +60,20 @@ export default function ChatWindow() {
         }
       };
 
-      // Listen for user status changes
-      const handleUserOnline = (data) => {
-        // Trigger a refetch of chats to update user status
-        console.log('User online:', data.userId);
-      };
+      // Listen for both 'receive-message' and 'new-message' events
+      socket.on('receive-message', handleNewMessage);
+      socket.on('new-message', handleNewMessage);
+      socket.on('message-edited', handleMessageEdited);
+      socket.on('message-deleted', handleMessageDeleted);
 
-      const handleUserOffline = (data) => {
-        // Trigger a refetch of chats to update user status
-        console.log('User offline:', data.userId);
-      };
-
-      // Listen for both events for compatibility
-      onEvent('receive-message', handleNewMessage);
-      onEvent('new-message', handleNewMessage);
-      onEvent('message-edited', handleMessageEdited);
-      onEvent('message-deleted', handleMessageDeleted);
-      onEvent('user-online', handleUserOnline);
-      onEvent('user-offline', handleUserOffline);
-
+      // Cleanup function: Remove listeners when chat changes
       return () => {
         socket.emit('leave-chat', activeChat);
-        offEvent('receive-message', handleNewMessage);
-        offEvent('new-message', handleNewMessage);
-        offEvent('message-edited', handleMessageEdited);
-        offEvent('message-deleted', handleMessageDeleted);
-        offEvent('user-online', handleUserOnline);
-        offEvent('user-offline', handleUserOffline);
+        // Remove the specific listeners for this chat
+        socket.off('receive-message', handleNewMessage);
+        socket.off('new-message', handleNewMessage);
+        socket.off('message-edited', handleMessageEdited);
+        socket.off('message-deleted', handleMessageDeleted);
       };
     }
   }, [activeChat, setMessages, addMessage, updateMessage, deleteMessage]);

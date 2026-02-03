@@ -67,15 +67,19 @@ export default function ChatHeader({ chatId }) {
     <motion.div
       initial={{ y: -50 }}
       animate={{ y: 0 }}
-      className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+      className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-gray-800 dark:to-gray-800"
     >
-      <div className="flex items-center gap-3">
-        <div className="w-12 h-12 rounded-full bg-gradient-primary text-white flex items-center justify-center font-bold">
+      <div className="flex items-center gap-4 flex-1">
+        <div className="w-14 h-14 rounded-full bg-gradient-to-r from-pink-600 to-purple-600 text-white flex items-center justify-center font-bold text-lg shadow-md">
           {getInitials(headerData.displayAvatar)}
         </div>
-        <div>
-          <h2 className="font-bold text-lg">{headerData.displayName}</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+        <div className="flex-1">
+          <h2 className="font-bold text-lg text-gray-900 dark:text-white">{headerData.displayName}</h2>
+          <p className={`text-sm font-medium ${
+            headerData.isOnline 
+              ? 'text-green-600 dark:text-green-400' 
+              : 'text-gray-500 dark:text-gray-400'
+          }`}>
             {getStatusText()}
           </p>
         </div>

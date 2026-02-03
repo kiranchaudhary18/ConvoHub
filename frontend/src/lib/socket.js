@@ -19,15 +19,15 @@ export const initializeSocket = () => {
     });
 
     socket.on('connect', () => {
-      console.log('Socket connected:', socket.id);
+      console.log('🔌 Socket connected:', socket.id);
     });
 
     socket.on('disconnect', () => {
-      console.log('Socket disconnected');
+      console.log('🔌 Socket disconnected');
     });
 
     socket.on('error', (error) => {
-      console.error('Socket error:', error);
+      console.error('🔌 Socket error:', error);
     });
   }
 
@@ -46,17 +46,5 @@ export const disconnectSocket = () => {
 export const emitEvent = (eventName, data) => {
   if (socket) {
     socket.emit(eventName, data);
-  }
-};
-
-export const onEvent = (eventName, callback) => {
-  if (socket) {
-    socket.on(eventName, callback);
-  }
-};
-
-export const offEvent = (eventName, callback) => {
-  if (socket) {
-    socket.off(eventName, callback);
   }
 };

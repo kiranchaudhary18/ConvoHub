@@ -62,13 +62,13 @@ export default function Sidebar() {
         {/* Tabs */}
         {sidebarOpen && (
           <div className="flex gap-2 p-4 border-b border-gray-200 dark:border-gray-700">
-            {['chats', 'groups', 'users'].map((tab) => (
+            {['chats', 'groups'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={`flex-1 py-2 rounded-lg font-medium transition capitalize ${
                   activeTab === tab
-                    ? 'bg-blue-500 text-white'
+                    ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white'
                     : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                 }`}
               >
@@ -84,7 +84,6 @@ export default function Sidebar() {
             <>
               {activeTab === 'chats' && <ChatList searchQuery={searchQuery} showGroups={false} />}
               {activeTab === 'groups' && <ChatList searchQuery={searchQuery} showGroups={true} />}
-              {activeTab === 'users' && <UsersList searchQuery={searchQuery} />}
             </>
           )}
         </div>

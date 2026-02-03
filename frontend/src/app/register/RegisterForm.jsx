@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { User, Mail, Lock, Eye, EyeOff, Loader, CheckCircle, AlertCircle } from 'lucide-react';
+import { User, Mail, Lock, Eye, EyeOff, Loader, AlertCircle } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import api from '@/lib/api';
 import { useAuthStore } from '@/stores/authStore';
@@ -125,7 +125,7 @@ export default function RegisterForm() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
       <Toaster position="top-center" />
       
       <motion.div
@@ -135,7 +135,7 @@ export default function RegisterForm() {
         className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 w-full max-w-md"
       >
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-blue-600 dark:text-blue-400 mb-2">ConvoHub</h1>
+          <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-purple-600 mb-2">ConvoHub</h1>
           <p className="text-gray-600 dark:text-gray-400">Join our community</p>
         </div>
 
@@ -153,89 +153,111 @@ export default function RegisterForm() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Name Field */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
               Full Name
             </label>
-            <div className="relative">
-              <User size={18} className="absolute left-3 top-3 text-gray-400" />
+            <div className="relative group">
+              <User className="absolute left-4 top-3.5 text-gray-400 group-focus-within:text-pink-500 transition" size={20} />
               <input
                 type="text"
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
+                className={`w-full pl-12 pr-4 py-3 border-2 rounded-lg transition-all duration-300 focus:outline-none ${
+                  errors.name
+                    ? 'border-red-500 focus:border-red-500'
+                    : 'border-gray-300 dark:border-gray-600 focus:border-pink-500'
+                } bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400`}
                 placeholder="John Doe"
-                className={`w-full pl-10 pr-4 py-2 border rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 transition ${
-                  errors.name ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                }`}
               />
             </div>
-            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+            {errors.name && (
+              <motion.p
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-red-500 text-sm mt-2 font-medium"
+              >
+                {errors.name}
+              </motion.p>
+            )}
           </div>
 
           {/* Email Field */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
               Email Address
             </label>
-            <div className="relative">
-              <Mail size={18} className="absolute left-3 top-3 text-gray-400" />
+            <div className="relative group">
+              <Mail className="absolute left-4 top-3.5 text-gray-400 group-focus-within:text-pink-500 transition" size={20} />
               <input
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
+                className={`w-full pl-12 pr-4 py-3 border-2 rounded-lg transition-all duration-300 focus:outline-none ${
+                  errors.email
+                    ? 'border-red-500 focus:border-red-500'
+                    : 'border-gray-300 dark:border-gray-600 focus:border-pink-500'
+                } bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400`}
                 placeholder="you@example.com"
-                className={`w-full pl-10 pr-4 py-2 border rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 transition ${
-                  errors.email ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                }`}
               />
             </div>
-            {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+            {errors.email && (
+              <motion.p
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-red-500 text-sm mt-2 font-medium"
+              >
+                {errors.email}
+              </motion.p>
+            )}
           </div>
 
           {/* Password Field */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
               Password
             </label>
-            <div className="relative">
-              <Lock size={18} className="absolute left-3 top-3 text-gray-400" />
+            <div className="relative group">
+              <Lock className="absolute left-4 top-3.5 text-gray-400 group-focus-within:text-pink-500 transition" size={20} />
               <input
                 type={showPassword ? 'text' : 'password'}
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
+                className={`w-full pl-12 pr-12 py-3 border-2 rounded-lg transition-all duration-300 focus:outline-none ${
+                  errors.password
+                    ? 'border-red-500 focus:border-red-500'
+                    : 'border-gray-300 dark:border-gray-600 focus:border-pink-500'
+                } bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400`}
                 placeholder="••••••••"
-                className={`w-full pl-10 pr-10 py-2 border rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 transition ${
-                  errors.password ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                }`}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                className="absolute right-4 top-3.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition"
               >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
 
             {/* Password Strength Indicator */}
             {formData.password && (
-              <div className="mt-2">
+              <div className="mt-3">
                 <div className="flex items-center gap-2">
-                  <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${passwordStrength}%` }}
-                      className={`h-full ${
+                      className={`h-full transition-colors ${
                         passwordStrength <= 25 ? 'bg-red-500' :
                         passwordStrength <= 50 ? 'bg-yellow-500' :
-                        passwordStrength <= 75 ? 'bg-blue-500' :
+                        passwordStrength <= 75 ? 'bg-pink-500' :
                         'bg-green-500'
                       }`}
                     />
                   </div>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
                     {passwordStrength <= 25 ? 'Weak' :
                      passwordStrength <= 50 ? 'Fair' :
                      passwordStrength <= 75 ? 'Good' :
@@ -245,35 +267,53 @@ export default function RegisterForm() {
               </div>
             )}
 
-            {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
+            {errors.password && (
+              <motion.p
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-red-500 text-sm mt-2 font-medium"
+              >
+                {errors.password}
+              </motion.p>
+            )}
           </div>
 
           {/* Confirm Password Field */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
               Confirm Password
             </label>
-            <div className="relative">
-              <Lock size={18} className="absolute left-3 top-3 text-gray-400" />
+            <div className="relative group">
+              <Lock className="absolute left-4 top-3.5 text-gray-400 group-focus-within:text-pink-500 transition" size={20} />
               <input
                 type={showConfirmPassword ? 'text' : 'password'}
                 name="confirmPassword"
                 value={formData.confirmPassword}
                 onChange={handleChange}
+                className={`w-full pl-12 pr-12 py-3 border-2 rounded-lg transition-all duration-300 focus:outline-none ${
+                  errors.confirmPassword
+                    ? 'border-red-500 focus:border-red-500'
+                    : 'border-gray-300 dark:border-gray-600 focus:border-pink-500'
+                } bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400`}
                 placeholder="••••••••"
-                className={`w-full pl-10 pr-10 py-2 border rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 transition ${
-                  errors.confirmPassword ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                }`}
               />
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                className="absolute right-4 top-3.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition"
               >
-                {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
-            {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
+            {errors.confirmPassword && (
+              <motion.p
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-red-500 text-sm mt-2 font-medium"
+              >
+                {errors.confirmPassword}
+              </motion.p>
+            )}
           </div>
 
           {/* Submit Button */}
@@ -282,7 +322,7 @@ export default function RegisterForm() {
             whileTap={{ scale: 0.98 }}
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition duration-200 flex items-center justify-center gap-2"
+            className="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl mt-6"
           >
             {loading ? (
               <>
@@ -290,18 +330,25 @@ export default function RegisterForm() {
                 Creating account...
               </>
             ) : (
-              <>
-                <CheckCircle size={20} />
-                Create Account
-              </>
+              'Create Account'
             )}
           </motion.button>
         </form>
 
+        {/* Divider */}
+        <div className="my-8 flex items-center gap-3">
+          <div className="flex-1 h-px bg-gray-300 dark:bg-gray-600"></div>
+          <span className="text-gray-500 dark:text-gray-400 text-sm font-medium">or</span>
+          <div className="flex-1 h-px bg-gray-300 dark:bg-gray-600"></div>
+        </div>
+
         {/* Login Link */}
-        <p className="text-center text-gray-600 dark:text-gray-400 mt-6">
+        <p className="text-center text-gray-600 dark:text-gray-400">
           Already have an account?{' '}
-          <Link href="/login" className="text-blue-600 dark:text-blue-400 hover:underline font-semibold">
+          <Link
+            href="/login"
+            className="text-pink-600 hover:text-pink-700 dark:text-pink-400 dark:hover:text-pink-300 font-bold transition duration-200"
+          >
             Sign in
           </Link>
         </p>

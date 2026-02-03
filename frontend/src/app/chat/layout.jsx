@@ -6,7 +6,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useChatStore } from '@/stores/chatStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useUserStore } from '@/stores/userStore';
-import { initializeSocket, getSocket, onEvent, offEvent } from '@/lib/socket';
+import { initializeSocket } from '@/lib/socket';
 import Sidebar from '@/components/chat/Sidebar';
 import ChatWindow from '@/components/chat/ChatWindow';
 import { Loader } from 'lucide-react';
@@ -46,9 +46,6 @@ export default function ChatLayout({ children }) {
     const fetchUsers = async () => {
       try {
         const response = await api.get('/users');
-        console.log('Users response:', response.data);
-        console.log('Users count:', response.data.users?.length || 0);
-        console.log('Total users:', response.data.totalUsers);
         setUsers(response.data.users || response.data.data || []);
       } catch (error) {
         console.error('Error fetching users:', error);
@@ -62,7 +59,7 @@ export default function ChatLayout({ children }) {
     // Refresh users every 30 seconds to keep online status updated
     const userRefreshInterval = setInterval(fetchUsers, 30000);
 
-    // Setup socket listeners
+    // Setup socket listeners for user status
     if (socket) {
       const handleUserOnline = (data) => {
         setUserOnline(data.userId);
@@ -72,20 +69,20 @@ export default function ChatLayout({ children }) {
         setUserOffline(data.userId);
       };
 
-      onEvent('user-online', handleUserOnline);
-      onEvent('user-offline', handleUserOffline);
+      socket.on('user-online', handleUserOnline);
+      socket.on('user-offline', handleUserOffline);
 
       return () => {
         clearInterval(userRefreshInterval);
-        offEvent('user-online', handleUserOnline);
-        offEvent('user-offline', handleUserOffline);
+        socket.off('user-online', handleUserOnline);
+        socket.off('user-offline', handleUserOffline);
       };
     }
 
     return () => {
       clearInterval(userRefreshInterval);
     };
-  }, [token, router, setChats, setUsers]);
+  }, [token, router, setChats, setUsers, setUserOnline, setUserOffline]);
 
   if (loading) {
     return (
