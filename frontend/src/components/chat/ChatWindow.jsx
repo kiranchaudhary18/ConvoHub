@@ -70,11 +70,20 @@ export default function ChatWindow() {
         }
       };
 
+      const handleMessageReacted = (data) => {
+        if (data.messageId) {
+          updateMessage(activeChat, data.messageId, {
+            reactions: data.reactions
+          });
+        }
+      };
+
       // Listen for both 'receive-message' and 'new-message' events
       socket.on('receive-message', handleNewMessage);
       socket.on('new-message', handleNewMessage);
       socket.on('message-edited', handleMessageEdited);
       socket.on('message-deleted', handleMessageDeleted);
+      socket.on('message-reacted', handleMessageReacted);
 
       // Cleanup function: Remove listeners when chat changes
       return () => {
@@ -84,17 +93,18 @@ export default function ChatWindow() {
         socket.off('new-message', handleNewMessage);
         socket.off('message-edited', handleMessageEdited);
         socket.off('message-deleted', handleMessageDeleted);
+        socket.off('message-reacted', handleMessageReacted);
       };
     }
   }, [activeChat, setMessages, addMessage, updateMessage, deleteMessage]);
 
   if (!activeChat) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="hidden md:flex flex-1 items-center justify-center bg-gray-50 dark:bg-gray-900">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="text-center text-gray-500 dark:text-gray-400"
+          className="text-center text-gray-500 dark:text-gray-400 px-4"
         >
           <p className="text-lg font-semibold">Select a chat to start</p>
         </motion.div>
@@ -106,7 +116,7 @@ export default function ChatWindow() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="flex-1 flex flex-col bg-white dark:bg-gray-900"
+      className="w-full h-full md:flex-1 flex flex-col bg-white dark:bg-gray-900"
     >
       <ChatHeader chatId={activeChat} />
       <MessageList chatId={activeChat} loading={loading} />

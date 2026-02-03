@@ -3,13 +3,21 @@
 import { useEffect, useState } from 'react';
 import { useChatStore } from '@/stores/chatStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useUIStore } from '@/stores/uiStore';
 import { motion } from 'framer-motion';
 import { getInitials, formatLastSeen } from '@/lib/utils';
+import { Menu, ArrowLeft } from 'lucide-react';
 
 export default function ChatHeader({ chatId }) {
-  const { chats, activeChat } = useChatStore();
+  const { chats, activeChat, setActiveChat } = useChatStore();
   const { user: currentUser } = useAuthStore();
+  const { toggleMobileSidebar, isMobileSidebarOpen } = useUIStore();
   const [headerData, setHeaderData] = useState(null);
+
+  const handleBackClick = () => {
+    // On mobile, close current chat to show sidebar
+    setActiveChat(null);
+  };
 
   useEffect(() => {
     // Get the current chat
@@ -56,15 +64,23 @@ export default function ChatHeader({ chatId }) {
     <motion.div
       initial={{ y: -50 }}
       animate={{ y: 0 }}
-      className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-gray-800 dark:to-gray-800"
+      className="flex items-center justify-between p-3 md:p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-gray-800 dark:to-gray-800"
     >
-      <div className="flex items-center gap-4 flex-1">
-        <div className="w-14 h-14 rounded-full bg-gradient-to-r from-pink-600 to-purple-600 text-white flex items-center justify-center font-bold text-lg shadow-md">
+      {/* Mobile back button */}
+      <button
+        onClick={handleBackClick}
+        className="md:hidden p-2 hover:bg-white/50 dark:hover:bg-gray-700/50 rounded-lg transition mr-2"
+      >
+        <ArrowLeft size={20} />
+      </button>
+
+      <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
+        <div className="w-10 h-10 md:w-14 md:h-14 rounded-full bg-gradient-to-r from-pink-600 to-purple-600 text-white flex items-center justify-center font-bold text-sm md:text-lg shadow-md flex-shrink-0">
           {getInitials(headerData.displayAvatar)}
         </div>
-        <div className="flex-1">
-          <h2 className="font-bold text-lg text-gray-900 dark:text-white">{headerData.displayName}</h2>
-          <p className={`text-sm font-medium ${
+        <div className="flex-1 min-w-0">
+          <h2 className="font-bold text-base md:text-lg text-gray-900 dark:text-white truncate">{headerData.displayName}</h2>
+          <p className={`text-xs md:text-sm font-medium truncate ${
             headerData.isOnline 
               ? 'text-green-600 dark:text-green-400' 
               : 'text-gray-500 dark:text-gray-400'
@@ -73,6 +89,14 @@ export default function ChatHeader({ chatId }) {
           </p>
         </div>
       </div>
+
+      {/* Mobile menu button */}
+      <button
+        onClick={toggleMobileSidebar}
+        className="md:hidden p-2 hover:bg-white/50 dark:hover:bg-gray-700/50 rounded-lg transition ml-2"
+      >
+        <Menu size={20} />
+      </button>
     </motion.div>
   );
 }

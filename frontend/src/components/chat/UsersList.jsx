@@ -15,7 +15,7 @@ export default function UsersList({ searchQuery }) {
   const { users } = useUserStore();
   const { user: currentUser } = useAuthStore();
   const { setChats, setActiveChat } = useChatStore();
-  const { setActiveTab } = useUIStore();
+  const { setActiveTab, closeMobileSidebar } = useUIStore();
 
   // Filter out current user from the list
   const otherUsers = (users || []).filter(u => u._id !== currentUser?._id);
@@ -41,6 +41,7 @@ export default function UsersList({ searchQuery }) {
       // Set active chat and switch to chats tab
       setActiveChat(chat._id);
       setActiveTab('chats');
+      closeMobileSidebar();
 
       // Ensure socket is connected and join the chat room
       const socket = initializeSocket();

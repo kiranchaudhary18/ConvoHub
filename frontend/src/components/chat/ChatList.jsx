@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useChatStore } from '@/stores/chatStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useUserStore } from '@/stores/userStore';
+import { useUIStore } from '@/stores/uiStore';
 import { formatDate, truncateMessage, getInitials } from '@/lib/utils';
 import { MessageCircle } from 'lucide-react';
 
@@ -11,6 +12,7 @@ export default function ChatList({ searchQuery, showGroups = false }) {
   const { chats, activeChat, setActiveChat } = useChatStore();
   const { user: currentUser } = useAuthStore();
   const { users } = useUserStore();
+  const { closeMobileSidebar } = useUIStore();
 
   // Debug: Log current state
   if (chats && chats.length > 0) {
@@ -113,7 +115,10 @@ export default function ChatList({ searchQuery, showGroups = false }) {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: index * 0.02 }}
-              onClick={() => setActiveChat(chat._id)}
+              onClick={() => {
+                setActiveChat(chat._id);
+                closeMobileSidebar();
+              }}
               className={`w-full p-3 rounded-lg transition-all ${
                 activeChat === chat._id
                   ? 'bg-blue-500 text-white'

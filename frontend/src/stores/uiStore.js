@@ -8,10 +8,13 @@ export const useUIStore = create((set) => ({
   showInviteModal: false,
   showProfileModal: false,
   typingUsers: {},
+  isMobileSidebarOpen: false,
 
   toggleDarkMode: () => set((state) => ({ darkMode: !state.darkMode })),
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
   setActiveTab: (tab) => set({ activeTab: tab }),
+  toggleMobileSidebar: () => set((state) => ({ isMobileSidebarOpen: !state.isMobileSidebarOpen })),
+  closeMobileSidebar: () => set({ isMobileSidebarOpen: false }),
   setShowGroupModal: (show) => set({ showGroupModal: show }),
   setShowInviteModal: (show) => set({ showInviteModal: show }),
   setShowProfileModal: (show) => set({ showProfileModal: show }),

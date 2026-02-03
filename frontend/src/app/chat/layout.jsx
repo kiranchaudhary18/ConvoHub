@@ -111,7 +111,7 @@ export default function ChatLayout({ children }) {
   }
 
   return (
-    <div className="flex h-screen bg-white dark:bg-gray-900">
+    <div className="flex h-screen bg-white dark:bg-gray-900 overflow-hidden">
       <Sidebar />
       <ChatWindow />
     </div>

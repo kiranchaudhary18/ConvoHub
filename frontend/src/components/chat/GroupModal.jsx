@@ -70,11 +70,11 @@ export default function GroupModal() {
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full"
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] md:max-h-[80vh] flex flex-col"
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-xl font-bold">Create Group</h2>
+            <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+              <h2 className="text-lg md:text-xl font-bold">Create Group</h2>
               <button
                 onClick={handleClose}
                 className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition"
