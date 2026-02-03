@@ -13,15 +13,31 @@ export default function MessageList({ chatId, loading }) {
   const { messages, updateMessage, deleteMessage } = useChatStore();
   const { user: currentUser } = useAuthStore();
   const messagesEndRef = useRef(null);
+  const deleteMenuRef = useRef(null);
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState('');
   const [hoveredMessageId, setHoveredMessageId] = useState(null);
+  const [showDeleteMenu, setShowDeleteMenu] = useState(null);
 
   const chatMessages = messages[chatId] || [];
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages]);
+
+  // Close delete menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (deleteMenuRef.current && !deleteMenuRef.current.contains(event.target)) {
+        setShowDeleteMenu(null);
+      }
+    };
+
+    if (showDeleteMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showDeleteMenu]);
 
   const handleEditClick = (message) => {
     setEditingId(message._id);
@@ -50,14 +66,29 @@ export default function MessageList({ chatId, loading }) {
     }
   };
 
-  const handleDeleteMessage = async (messageId) => {
+  const handleDeleteMessage = async (messageId, deleteForEveryone = false) => {
     try {
-      const confirmed = window.confirm('Delete this message?');
-      if (!confirmed) return;
-
-      await api.delete(`/messages/${messageId}`);
-      deleteMessage(chatId, messageId);
-      toast.success('Message deleted');
+      setShowDeleteMenu(null);
+      
+      const endpoint = deleteForEveryone 
+        ? `/messages/${messageId}/delete-for-everyone`
+        : `/messages/${messageId}/delete-for-me`;
+      
+      await api.delete(endpoint);
+      
+      if (deleteForEveryone) {
+        // Update message in store to show as deleted
+        updateMessage(chatId, messageId, { 
+          isDeleted: true, 
+          deletedAt: new Date(),
+          text: 'This message was deleted' 
+        });
+      } else {
+        // Remove message from local view only
+        deleteMessage(chatId, messageId);
+      }
+      
+      toast.success(deleteForEveryone ? 'Message deleted for everyone' : 'Message deleted for you');
     } catch (error) {
       toast.error('Failed to delete message');
       console.error('Delete error:', error);
@@ -198,7 +229,7 @@ export default function MessageList({ chatId, loading }) {
                 </div>
 
                 {/* Edit/Delete buttons */}
-                {isSent && !isDeleted && (hoveredMessageId === message._id || isEditing) && (
+                {isSent && !isDeleted && (hoveredMessageId === message._id || isEditing || showDeleteMenu === message._id) && (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -217,13 +248,39 @@ export default function MessageList({ chatId, loading }) {
                         Can't edit
                       </div>
                     )}
-                    <button
-                      onClick={() => handleDeleteMessage(message._id)}
-                      title="Delete message"
-                      className="p-2 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition"
-                    >
-                      <Trash2 size={16} className="text-red-500" />
-                    </button>
+                    <div className="relative" ref={showDeleteMenu === message._id ? deleteMenuRef : null}>
+                      <button
+                        onClick={() => setShowDeleteMenu(showDeleteMenu === message._id ? null : message._id)}
+                        title="Delete options"
+                        className="p-2 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition"
+                      >
+                        <Trash2 size={16} className="text-red-500" />
+                      </button>
+                      
+                      {/* Delete dropdown menu */}
+                      {showDeleteMenu === message._id && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="absolute top-full right-0 mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-600 overflow-hidden z-50 min-w-[200px]"
+                        >
+                          <button
+                            onClick={() => handleDeleteMessage(message._id, false)}
+                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition flex items-center gap-2"
+                          >
+                            <Trash2 size={14} />
+                            Delete for Me
+                          </button>
+                          <button
+                            onClick={() => handleDeleteMessage(message._id, true)}
+                            className="w-full px-4 py-2 text-left text-sm hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 transition flex items-center gap-2 border-t border-gray-200 dark:border-gray-600"
+                          >
+                            <Trash2 size={14} />
+                            Delete for Everyone
+                          </button>
+                        </motion.div>
+                      )}
+                    </div>
                   </motion.div>
                 )}
               </div>

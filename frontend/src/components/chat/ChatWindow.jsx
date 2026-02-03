@@ -56,7 +56,17 @@ export default function ChatWindow() {
 
       const handleMessageDeleted = (data) => {
         if (data.chatId === activeChat) {
-          deleteMessage(activeChat, data._id);
+          // If deleted for everyone, update the message to show as deleted
+          if (data.isDeleted) {
+            updateMessage(activeChat, data._id, {
+              isDeleted: true,
+              deletedAt: data.deletedAt,
+              text: 'This message was deleted'
+            });
+          } else {
+            // If deleted for me only, remove from view
+            deleteMessage(activeChat, data._id);
+          }
         }
       };
 
