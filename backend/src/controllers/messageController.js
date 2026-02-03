@@ -35,6 +35,10 @@ const sendMessage = async (req, res) => {
       });
     }
 
+    // Check if this is the first message in the chat
+    const messageCount = await Message.countDocuments({ chatId });
+    const isFirstMessage = messageCount === 0;
+
     // Create message
     const message = await Message.create({
       chatId,
@@ -47,14 +51,14 @@ const sendMessage = async (req, res) => {
     const populatedMessage = await message.populate('senderId', '-password');
 
     // Update chat's lastMessage and updatedAt
-    await Chat.findByIdAndUpdate(
+    const updatedChat = await Chat.findByIdAndUpdate(
       chatId,
       {
         lastMessage: message._id,
         updatedAt: new Date(),
       },
       { new: true }
-    );
+    ).populate('members', '-password').populate('lastMessage');
 
     const responseData = {
       _id: populatedMessage._id,
@@ -70,6 +74,16 @@ const sendMessage = async (req, res) => {
     const io = req.app.get('io');
     if (io) {
       io.to(chatId).emit('new-message', responseData);
+
+      // If it's the first message, notify all chat members about the new chat
+      if (isFirstMessage) {
+        chat.members.forEach((memberId) => {
+          io.to(memberId).emit('new-chat', {
+            chat: updatedChat.toObject(),
+            createdBy: senderId,
+          });
+        });
+      }
     }
 
     return res.status(201).json({

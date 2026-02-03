@@ -48,6 +48,22 @@ const createOrGetOneToOneChat = async (req, res) => {
 
     chat = await chat.populate('members', '-password');
 
+    // Emit socket event to notify new chat to both users
+    const io = req.app.get('io');
+    if (io) {
+      // Notify the recipient about the new chat
+      io.to(recipientId).emit('new-chat', {
+        chat: chat.toObject(),
+        createdBy: userId,
+      });
+      
+      // Notify the sender about the new chat
+      io.to(userId).emit('new-chat', {
+        chat: chat.toObject(),
+        createdBy: userId,
+      });
+    }
+
     return res.status(201).json({
       success: true,
       message: 'Chat created',
@@ -98,6 +114,18 @@ const createGroupChat = async (req, res) => {
     });
 
     const populatedChat = await chat.populate('members admin', '-password');
+
+    // Emit socket event to notify all group members about the new group
+    const io = req.app.get('io');
+    if (io) {
+      // Notify all members about the new group
+      membersArray.forEach((memberId) => {
+        io.to(memberId).emit('new-group', {
+          chat: populatedChat.toObject(),
+          createdBy: userId,
+        });
+      });
+    }
 
     return res.status(201).json({
       success: true,
