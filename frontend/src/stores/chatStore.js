@@ -8,6 +8,20 @@ export const useChatStore = create((set) => ({
   loading: false,
 
   setChats: (chats) => set({ chats }),
+  
+  addChatToList: (newChat) =>
+    set((state) => {
+      // Check if chat already exists
+      const chatExists = state.chats.some((c) => c._id === newChat._id);
+      if (chatExists) {
+        return state;
+      }
+      // Add new chat to the beginning of the list
+      return {
+        chats: [newChat, ...state.chats],
+      };
+    }),
+
   setMessages: (chatId, messages) =>
     set((state) => ({
       messages: { ...state.messages, [chatId]: messages },

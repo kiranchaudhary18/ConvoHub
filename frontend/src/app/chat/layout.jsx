@@ -15,7 +15,7 @@ import api from '@/lib/api';
 export default function ChatLayout({ children }) {
   const router = useRouter();
   const { user, token } = useAuthStore();
-  const { chats, setChats } = useChatStore();
+  const { chats, setChats, addChatToList } = useChatStore();
   const { setUsers, setUserOnline, setUserOffline } = useUserStore();
   const [loading, setLoading] = useState(true);
 
@@ -59,7 +59,7 @@ export default function ChatLayout({ children }) {
     // Refresh users every 30 seconds to keep online status updated
     const userRefreshInterval = setInterval(fetchUsers, 30000);
 
-    // Setup socket listeners for user status
+    // Setup socket listeners for user status and new chats
     if (socket) {
       const handleUserOnline = (data) => {
         setUserOnline(data.userId);
@@ -69,20 +69,40 @@ export default function ChatLayout({ children }) {
         setUserOffline(data.userId);
       };
 
+      // Listen for new one-to-one chats
+      const handleNewChat = (data) => {
+        console.log('📨 New chat received:', data);
+        if (data.chat) {
+          addChatToList(data.chat);
+        }
+      };
+
+      // Listen for new groups
+      const handleNewGroup = (data) => {
+        console.log('👥 New group received:', data);
+        if (data.chat) {
+          addChatToList(data.chat);
+        }
+      };
+
       socket.on('user-online', handleUserOnline);
       socket.on('user-offline', handleUserOffline);
+      socket.on('new-chat', handleNewChat);
+      socket.on('new-group', handleNewGroup);
 
       return () => {
         clearInterval(userRefreshInterval);
         socket.off('user-online', handleUserOnline);
         socket.off('user-offline', handleUserOffline);
+        socket.off('new-chat', handleNewChat);
+        socket.off('new-group', handleNewGroup);
       };
     }
 
     return () => {
       clearInterval(userRefreshInterval);
     };
-  }, [token, router, setChats, setUsers, setUserOnline, setUserOffline]);
+  }, [token, router, setChats, setUsers, setUserOnline, setUserOffline, addChatToList]);
 
   if (loading) {
     return (
