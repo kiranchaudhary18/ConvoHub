@@ -12,6 +12,7 @@ const {
   deleteMessageForEveryone,
   addReaction,
   removeReaction,
+  togglePinMessage,
 } = require('../controllers/messageController');
 
 const router = express.Router();
@@ -73,5 +74,10 @@ router.post('/:messageId/react', addReaction);
 // @desc    Remove reaction from message
 // @access  Private
 router.delete('/:messageId/react', removeReaction);
+
+// @route   PUT /api/messages/:messageId/pin
+// @desc    Toggle pin message
+// @access  Private
+router.put('/:messageId/pin', togglePinMessage);
 
 module.exports = router;

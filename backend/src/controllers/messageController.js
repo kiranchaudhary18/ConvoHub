@@ -8,7 +8,7 @@ const cloudinary = require('cloudinary').v2;
 // @access  Private
 const sendMessage = async (req, res) => {
   try {
-    const { chatId, text } = req.body;
+    const { chatId, text, replyTo } = req.body;
     const senderId = req.user.id;
 
     if (!chatId || !text) {
@@ -49,11 +49,19 @@ const sendMessage = async (req, res) => {
       chatId,
       senderId,
       text,
+      replyTo: replyTo || null,
       seenBy: [senderId], // Message is seen by sender
     });
 
-    // Populate sender details
-    const populatedMessage = await message.populate('senderId', '-password');
+    // Populate sender details and reply message if exists
+    let populatedMessage = await message.populate('senderId', '-password');
+    
+    if (message.replyTo) {
+      populatedMessage = await populatedMessage.populate({
+        path: 'replyTo',
+        populate: { path: 'senderId', select: 'name email' }
+      });
+    }
 
     // Update chat's lastMessage and updatedAt
     const updatedChat = await Chat.findByIdAndUpdate(
@@ -78,6 +86,7 @@ const sendMessage = async (req, res) => {
       senderId: populatedMessage.senderId,
       text: populatedMessage.text,
       type: 'text',
+      replyTo: populatedMessage.replyTo || null,
       seenBy: populatedMessage.seenBy,
       createdAt: populatedMessage.createdAt,
     };
@@ -173,6 +182,10 @@ const getMessages = async (req, res) => {
     })
       .populate('senderId', '-password')
       .populate('seenBy', '-password')
+      .populate({
+        path: 'replyTo',
+        populate: { path: 'senderId', select: 'name email' }
+      })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -696,6 +709,60 @@ const removeReaction = async (req, res) => {
   }
 };
 
+// Toggle pin message
+const togglePinMessage = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const userId = req.user._id || req.user.id;
+
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return res.status(404).json({
+        success: false,
+        message: 'Message not found',
+      });
+    }
+
+    // Toggle pin status
+    message.isPinned = !message.isPinned;
+    message.pinnedAt = message.isPinned ? new Date() : null;
+    message.pinnedBy = message.isPinned ? userId : null;
+
+    await message.save();
+
+    const populatedMessage = await Message.findById(messageId)
+      .populate('pinnedBy', 'name email');
+
+    // Emit socket event
+    const io = req.app.get('io');
+    if (io) {
+      io.to(message.chatId.toString()).emit('message-pinned', {
+        messageId: message._id,
+        isPinned: message.isPinned,
+        pinnedAt: message.pinnedAt,
+        pinnedBy: populatedMessage.pinnedBy,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: message.isPinned ? 'Message pinned' : 'Message unpinned',
+      data: {
+        _id: message._id,
+        isPinned: message.isPinned,
+        pinnedAt: message.pinnedAt,
+        pinnedBy: populatedMessage.pinnedBy,
+      },
+    });
+  } catch (error) {
+    console.error('Toggle pin error:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   sendMessage,
   getMessages,
@@ -708,4 +775,5 @@ module.exports = {
   deleteMessageForEveryone,
   addReaction,
   removeReaction,
+  togglePinMessage,
 };

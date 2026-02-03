@@ -16,6 +16,11 @@ const messageSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Message cannot be empty'],
     },
+    replyTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Message',
+      default: null,
+    },
     type: {
       type: String,
       enum: ['text', 'image', 'file'],
@@ -78,6 +83,19 @@ const messageSchema = new mongoose.Schema(
         },
       },
     ],
+    isPinned: {
+      type: Boolean,
+      default: false,
+    },
+    pinnedAt: {
+      type: Date,
+      default: null,
+    },
+    pinnedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
     createdAt: {
       type: Date,
       default: Date.now,

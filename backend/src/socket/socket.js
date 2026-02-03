@@ -167,6 +167,26 @@ const initializeSocket = (io) => {
         });
       });
 
+      // ============ TYPING INDICATOR ============
+
+      // User started typing
+      socket.on('typing-start', ({ chatId }) => {
+        socket.broadcast.to(chatId).emit('user-typing', {
+          userId,
+          chatId,
+          isTyping: true,
+        });
+      });
+
+      // User stopped typing
+      socket.on('typing-stop', ({ chatId }) => {
+        socket.broadcast.to(chatId).emit('user-typing', {
+          userId,
+          chatId,
+          isTyping: false,
+        });
+      });
+
       // ============ DISCONNECT EVENT ============
 
       socket.on('disconnect', async () => {
