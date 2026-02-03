@@ -28,7 +28,12 @@ const sendMessage = async (req, res) => {
     }
 
     // Check if user is a member of the chat
-    if (!chat.members.includes(senderId)) {
+    const isMember = chat.members.some(member => {
+      const memberId = typeof member === 'object' ? member._id || member.id : member;
+      return memberId.toString() === senderId.toString();
+    });
+    
+    if (!isMember) {
       return res.status(403).json({
         success: false,
         message: 'You are not a member of this chat',
@@ -60,6 +65,13 @@ const sendMessage = async (req, res) => {
       { new: true }
     ).populate('members', '-password').populate('lastMessage');
 
+    if (!updatedChat) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to update chat',
+      });
+    }
+
     const responseData = {
       _id: populatedMessage._id,
       chatId,
@@ -72,17 +84,38 @@ const sendMessage = async (req, res) => {
 
     // Emit socket event for real-time update
     const io = req.app.get('io');
-    if (io) {
+    if (io && updatedChat.members) {
+      // Emit to chat room (for users who have joined)
       io.to(chatId).emit('new-message', responseData);
+      
+      // Also emit to individual users' personal rooms (for users who haven't joined the room yet)
+      try {
+        updatedChat.members.forEach((member) => {
+          const memberId = typeof member === 'object' ? member._id : member;
+          if (memberId) {
+            io.to(`user-${memberId}`).emit('new-message', responseData);
+          }
+        });
+      } catch (socketError) {
+        // Socket emit error - continue processing
+      }
 
       // If it's the first message, notify all chat members about the new chat
       if (isFirstMessage) {
-        updatedChat.members.forEach((memberId) => {
-          io.to(`user-${memberId}`).emit('new-chat', {
-            chat: updatedChat.toObject(),
-            createdBy: senderId,
+        try {
+          updatedChat.members.forEach((member) => {
+            // member can be an object (populated) or string (ID)
+            const memberId = typeof member === 'object' ? member._id : member;
+            if (memberId) {
+              io.to(`user-${memberId}`).emit('new-chat', {
+                chat: updatedChat.toObject(),
+                createdBy: senderId,
+              });
+            }
           });
-        });
+        } catch (socketError) {
+          // Socket emit error - continue processing
+        }
       }
     }
 
@@ -92,10 +125,10 @@ const sendMessage = async (req, res) => {
       data: responseData,
     });
   } catch (error) {
-    console.error('Send message error:', error.message);
     return res.status(500).json({
       success: false,
       message: error.message,
+      error: process.env.NODE_ENV === 'development' ? error.stack : undefined,
     });
   }
 };
@@ -119,7 +152,12 @@ const getMessages = async (req, res) => {
     }
 
     // Check if user is a member of the chat
-    if (!chat.members.includes(userId)) {
+    const isMember = chat.members.some(member => {
+      const memberId = typeof member === 'object' ? member._id || member.id : member;
+      return memberId.toString() === userId.toString();
+    });
+    
+    if (!isMember) {
       return res.status(403).json({
         success: false,
         message: 'You are not a member of this chat',
@@ -248,7 +286,12 @@ const uploadFile = async (req, res) => {
     }
 
     // Check if user is a member of the chat
-    if (!chat.members.includes(senderId)) {
+    const isMember = chat.members.some(member => {
+      const memberId = typeof member === 'object' ? member._id || member.id : member;
+      return memberId.toString() === senderId.toString();
+    });
+    
+    if (!isMember) {
       return res.status(403).json({
         success: false,
         message: 'You are not a member of this chat',
