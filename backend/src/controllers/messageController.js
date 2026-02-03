@@ -581,6 +581,121 @@ const deleteMessage = async (req, res) => {
   return deleteMessageForMe(req, res);
 };
 
+// Add or update reaction
+const addReaction = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const { emoji } = req.body;
+    const userId = req.user._id || req.user.id;
+
+    if (!emoji) {
+      return res.status(400).json({
+        success: false,
+        message: 'Emoji is required',
+      });
+    }
+
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return res.status(404).json({
+        success: false,
+        message: 'Message not found',
+      });
+    }
+
+    // Check if user already reacted
+    const existingReactionIndex = message.reactions.findIndex(
+      r => r.userId.toString() === userId.toString()
+    );
+
+    if (existingReactionIndex !== -1) {
+      // Update existing reaction
+      message.reactions[existingReactionIndex].emoji = emoji;
+      message.reactions[existingReactionIndex].createdAt = new Date();
+    } else {
+      // Add new reaction
+      message.reactions.push({
+        userId,
+        emoji,
+        createdAt: new Date(),
+      });
+    }
+
+    await message.save();
+
+    const populatedMessage = await Message.findById(messageId)
+      .populate('reactions.userId', 'name email');
+
+    // Emit socket event
+    const io = req.app.get('io');
+    if (io) {
+      io.to(message.chatId.toString()).emit('message-reacted', {
+        messageId: message._id,
+        reactions: populatedMessage.reactions,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Reaction added',
+      data: populatedMessage.reactions,
+    });
+  } catch (error) {
+    console.error('Add reaction error:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// Remove reaction
+const removeReaction = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const userId = req.user._id || req.user.id;
+
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return res.status(404).json({
+        success: false,
+        message: 'Message not found',
+      });
+    }
+
+    // Remove user's reaction
+    message.reactions = message.reactions.filter(
+      r => r.userId.toString() !== userId.toString()
+    );
+
+    await message.save();
+
+    const populatedMessage = await Message.findById(messageId)
+      .populate('reactions.userId', 'name email');
+
+    // Emit socket event
+    const io = req.app.get('io');
+    if (io) {
+      io.to(message.chatId.toString()).emit('message-reacted', {
+        messageId: message._id,
+        reactions: populatedMessage.reactions,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Reaction removed',
+      data: populatedMessage.reactions,
+    });
+  } catch (error) {
+    console.error('Remove reaction error:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   sendMessage,
   getMessages,
@@ -591,4 +706,6 @@ module.exports = {
   deleteMessage,
   deleteMessageForMe,
   deleteMessageForEveryone,
+  addReaction,
+  removeReaction,
 };

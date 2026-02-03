@@ -10,6 +10,8 @@ const {
   deleteMessage,
   deleteMessageForMe,
   deleteMessageForEveryone,
+  addReaction,
+  removeReaction,
 } = require('../controllers/messageController');
 
 const router = express.Router();
@@ -61,5 +63,15 @@ router.delete('/:messageId/delete-for-me', deleteMessageForMe);
 // @desc    Delete message for everyone
 // @access  Private
 router.delete('/:messageId/delete-for-everyone', deleteMessageForEveryone);
+
+// @route   POST /api/messages/:messageId/react
+// @desc    Add or update reaction to message
+// @access  Private
+router.post('/:messageId/react', addReaction);
+
+// @route   DELETE /api/messages/:messageId/react
+// @desc    Remove reaction from message
+// @access  Private
+router.delete('/:messageId/react', removeReaction);
 
 module.exports = router;
