@@ -6,9 +6,9 @@ import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
 import { motion } from 'framer-motion';
 import { getInitials, formatLastSeen } from '@/lib/utils';
-import { Menu, ArrowLeft } from 'lucide-react';
+import { Menu, ArrowLeft, Search } from 'lucide-react';
 
-export default function ChatHeader({ chatId }) {
+export default function ChatHeader({ chatId, onSearchToggle }) {
   const { chats, activeChat, setActiveChat } = useChatStore();
   const { user: currentUser } = useAuthStore();
   const { toggleMobileSidebar, isMobileSidebarOpen } = useUIStore();
@@ -90,13 +90,24 @@ export default function ChatHeader({ chatId }) {
         </div>
       </div>
 
-      {/* Mobile menu button */}
-      <button
-        onClick={toggleMobileSidebar}
-        className="md:hidden p-2 hover:bg-white/50 dark:hover:bg-gray-700/50 rounded-lg transition ml-2"
-      >
-        <Menu size={20} />
-      </button>
+      <div className="flex items-center gap-2">
+        {/* Search button */}
+        <button
+          onClick={onSearchToggle}
+          className="p-2 hover:bg-white/50 dark:hover:bg-gray-700/50 rounded-lg transition"
+          title="Search messages"
+        >
+          <Search size={20} />
+        </button>
+
+        {/* Mobile menu button */}
+        <button
+          onClick={toggleMobileSidebar}
+          className="md:hidden p-2 hover:bg-white/50 dark:hover:bg-gray-700/50 rounded-lg transition"
+        >
+          <Menu size={20} />
+        </button>
+      </div>
     </motion.div>
   );
 }

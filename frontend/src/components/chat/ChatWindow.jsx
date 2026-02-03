@@ -14,9 +14,18 @@ export default function ChatWindow() {
   const { activeChat, messages, setMessages, addMessage, updateMessage, deleteMessage } = useChatStore();
   const { user: currentUser } = useAuthStore();
   const [loading, setLoading] = useState(false);
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
 
   useEffect(() => {
     if (!activeChat) return;
+
+    // Reset search when chat changes
+    setShowSearch(false);
+    setSearchQuery('');
+    setSearchResults([]);
 
     // Fetch messages
     const fetchMessages = async () => {
@@ -78,12 +87,23 @@ export default function ChatWindow() {
         }
       };
 
+      const handleMessagePinned = (data) => {
+        if (data.messageId) {
+          updateMessage(activeChat, data.messageId, {
+            isPinned: data.isPinned,
+            pinnedAt: data.pinnedAt,
+            pinnedBy: data.pinnedBy
+          });
+        }
+      };
+
       // Listen for both 'receive-message' and 'new-message' events
       socket.on('receive-message', handleNewMessage);
       socket.on('new-message', handleNewMessage);
       socket.on('message-edited', handleMessageEdited);
       socket.on('message-deleted', handleMessageDeleted);
       socket.on('message-reacted', handleMessageReacted);
+      socket.on('message-pinned', handleMessagePinned);
 
       // Cleanup function: Remove listeners when chat changes
       return () => {
@@ -94,9 +114,24 @@ export default function ChatWindow() {
         socket.off('message-edited', handleMessageEdited);
         socket.off('message-deleted', handleMessageDeleted);
         socket.off('message-reacted', handleMessageReacted);
+        socket.off('message-pinned', handleMessagePinned);
       };
     }
   }, [activeChat, setMessages, addMessage, updateMessage, deleteMessage]);
+
+  // Handle search
+  useEffect(() => {
+    if (!searchQuery.trim() || !activeChat) {
+      setSearchResults([]);
+      return;
+    }
+
+    const chatMessages = messages[activeChat] || [];
+    const results = chatMessages.filter(msg => 
+      msg.text && msg.text.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    setSearchResults(results);
+  }, [searchQuery, messages, activeChat]);
 
   if (!activeChat) {
     return (
@@ -118,9 +153,39 @@ export default function ChatWindow() {
       animate={{ opacity: 1 }}
       className="w-full h-full md:flex-1 flex flex-col bg-white dark:bg-gray-900"
     >
-      <ChatHeader chatId={activeChat} />
-      <MessageList chatId={activeChat} loading={loading} />
-      <MessageInput chatId={activeChat} />
+      <ChatHeader chatId={activeChat} onSearchToggle={() => setShowSearch(!showSearch)} />
+      
+      {/* Search Bar */}
+      {showSearch && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
+        >
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search messages..."
+            className="w-full px-4 py-2 rounded-lg bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white"
+            autoFocus
+          />
+          {searchResults.length > 0 && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} found
+            </p>
+          )}
+        </motion.div>
+      )}
+
+      <MessageList 
+        chatId={activeChat} 
+        loading={loading} 
+        onReply={setReplyingTo}
+        searchQuery={searchQuery}
+        searchResults={searchResults}
+      />
+      <MessageInput chatId={activeChat} replyingTo={replyingTo} onCancelReply={() => setReplyingTo(null)} />
     </motion.div>
   );
 }

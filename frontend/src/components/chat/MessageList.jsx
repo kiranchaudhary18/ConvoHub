@@ -5,11 +5,12 @@ import { useChatStore } from '@/stores/chatStore';
 import { useAuthStore } from '@/stores/authStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatTime } from '@/lib/utils';
-import { Check, CheckCheck, Trash2, Edit2, X, Smile } from 'lucide-react';
+import { Check, CheckCheck, Trash2, Edit2, X, Smile, Reply, Pin } from 'lucide-react';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
+import { getSocket } from '@/lib/socket';
 
-export default function MessageList({ chatId, loading }) {
+export default function MessageList({ chatId, loading, onReply, searchQuery, searchResults }) {
   const { messages, updateMessage, deleteMessage } = useChatStore();
   const { user: currentUser } = useAuthStore();
   const messagesEndRef = useRef(null);
@@ -21,10 +22,39 @@ export default function MessageList({ chatId, loading }) {
   const [longPressTimer, setLongPressTimer] = useState(null);
   const [activeMessageId, setActiveMessageId] = useState(null);
   const [showReactionPicker, setShowReactionPicker] = useState(null);
+  const [typingUsers, setTypingUsers] = useState(new Set());
 
   const quickReactions = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
   const chatMessages = messages[chatId] || [];
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
+
+  // Listen for typing indicators
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const handleUserTyping = ({ userId, isTyping }) => {
+      setTypingUsers(prev => {
+        const newSet = new Set(prev);
+        if (isTyping) {
+          newSet.add(userId);
+        } else {
+          newSet.delete(userId);
+        }
+        return newSet;
+      });
+    };
+
+    socket.on('user-typing', handleUserTyping);
+
+    return () => {
+      socket.off('user-typing', handleUserTyping);
+    };
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -160,8 +190,53 @@ export default function MessageList({ chatId, loading }) {
     }
   };
 
+  // Highlight search text
+  const highlightText = (text, query) => {
+    if (!query || !text) return text;
+    
+    const parts = text.split(new RegExp(`(${query})`, 'gi'));
+    return parts.map((part, index) =>
+      part.toLowerCase() === query.toLowerCase() ? (
+        <mark key={index} className="bg-yellow-300 dark:bg-yellow-600">{part}</mark>
+      ) : (
+        part
+      )
+    );
+  };
+
+  // Check if message is in search results
+  const isSearchResult = (messageId) => {
+    return searchResults && searchResults.some(msg => msg._id === messageId);
+  };
+
+  const handleTogglePin = async (messageId) => {
+    try {
+      const response = await api.put(`/messages/${messageId}/pin`);
+      updateMessage(chatId, messageId, response.data.data);
+      toast.success(response.data.message);
+    } catch (error) {
+      toast.error('Failed to pin/unpin message');
+      console.error('Pin error:', error);
+    }
+  };
+
   return (
     <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-3 md:space-y-4 overscroll-contain">
+      {/* Pinned Messages Bar */}
+      {chatMessages.filter(m => m.isPinned).length > 0 && (
+        <div className="sticky top-0 z-20 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 mb-4">
+          <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+            <Pin size={16} className="flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold mb-1">Pinned Messages ({chatMessages.filter(m => m.isPinned).length})</p>
+              {chatMessages.filter(m => m.isPinned).slice(0, 2).map(msg => (
+                <p key={msg._id} className="text-xs truncate">{msg.text}</p>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div className="flex items-center justify-center h-full">
           <p className="text-gray-500 dark:text-gray-400 text-sm md:text-base">Loading messages...</p>
@@ -200,16 +275,37 @@ export default function MessageList({ chatId, loading }) {
               onMouseLeave={() => setHoveredMessageId(null)}
             >
               <div className="relative group max-w-[85%] sm:max-w-[75%] md:max-w-md lg:max-w-lg">
+                {/* Pin indicator */}
+                {message.isPinned && (
+                  <div className="absolute -top-2 -left-2 z-10">
+                    <Pin size={14} className="text-amber-500 fill-amber-500" />
+                  </div>
+                )}
+                
                 <div
                   className={`px-3 py-2 md:px-4 md:py-3 rounded-2xl ${
                     isSent
                       ? 'bg-blue-500 text-white rounded-br-none'
                       : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-bl-none'
-                  } ${isDeleted ? 'italic opacity-50' : ''}`}
+                  } ${isDeleted ? 'italic opacity-50' : ''} ${
+                    isSearchResult(message._id) ? 'ring-2 ring-yellow-400' : ''
+                  } ${message.isPinned ? 'ring-2 ring-amber-400' : ''}`}
                   onTouchStart={() => !isDeleted && handleTouchStart(message._id)}
                   onTouchEnd={handleTouchEnd}
                   onTouchMove={handleTouchMove}
                 >
+                  {/* Reply preview */}
+                  {message.replyTo && !isDeleted && (
+                    <div className="mb-2 p-2 bg-black/10 dark:bg-white/10 rounded border-l-2 border-current">
+                      <p className="text-xs opacity-75 font-semibold">
+                        {message.replyTo.senderId?.name || 'User'}
+                      </p>
+                      <p className="text-xs opacity-75 truncate">
+                        {message.replyTo.text}
+                      </p>
+                    </div>
+                  )}
+
                   {isEditing ? (
                     <div className="space-y-2">
                       <input
@@ -271,7 +367,14 @@ export default function MessageList({ chatId, loading }) {
                       )}
                     </div>
                   ) : (
-                    <p className="break-words">{isDeleted ? 'This message was deleted' : message.text}</p>
+                    <p className="break-words">
+                      {isDeleted 
+                        ? 'This message was deleted' 
+                        : searchQuery 
+                          ? highlightText(message.text, searchQuery)
+                          : message.text
+                      }
+                    </p>
                   )}
                   <div
                     className={`flex items-center justify-between gap-2 mt-1 text-xs ${
@@ -358,6 +461,24 @@ export default function MessageList({ chatId, loading }) {
                       )}
                     </div>
 
+                    {/* Pin button - for all messages */}
+                    <button
+                      onClick={() => handleTogglePin(message._id)}
+                      title={message.isPinned ? "Unpin message" : "Pin message"}
+                      className="p-2 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition"
+                    >
+                      <Pin size={16} className={message.isPinned ? "text-amber-500 fill-amber-500" : "text-gray-500"} />
+                    </button>
+
+                    {/* Reply button - for all messages */}
+                    <button
+                      onClick={() => onReply && onReply(message)}
+                      title="Reply"
+                      className="p-2 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition"
+                    >
+                      <Reply size={16} className="text-green-500" />
+                    </button>
+
                     {/* Edit button - only for sent messages */}
                     {isSent && !message.isEdited ? (
                       <button
@@ -416,6 +537,37 @@ export default function MessageList({ chatId, loading }) {
           );
         })
       )}
+      
+      {/* Typing Indicator */}
+      {typingUsers.size > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 10 }}
+          className="flex justify-start"
+        >
+          <div className="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-2xl rounded-bl-none">
+            <div className="flex gap-1">
+              <motion.span
+                animate={{ opacity: [0.4, 1, 0.4] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+                className="w-2 h-2 bg-gray-500 dark:bg-gray-400 rounded-full"
+              />
+              <motion.span
+                animate={{ opacity: [0.4, 1, 0.4] }}
+                transition={{ duration: 1.5, repeat: Infinity, delay: 0.2 }}
+                className="w-2 h-2 bg-gray-500 dark:bg-gray-400 rounded-full"
+              />
+              <motion.span
+                animate={{ opacity: [0.4, 1, 0.4] }}
+                transition={{ duration: 1.5, repeat: Infinity, delay: 0.4 }}
+                className="w-2 h-2 bg-gray-500 dark:bg-gray-400 rounded-full"
+              />
+            </div>
+          </div>
+        </motion.div>
+      )}
+      
       <div ref={messagesEndRef} />
     </div>
   );

@@ -1,16 +1,16 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Send, Smile, Paperclip, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { useChatStore } from '@/stores/chatStore';
 import { useAuthStore } from '@/stores/authStore';
-import { emitEvent, getSocket } from '@/lib/socket';
+import { getSocket } from '@/lib/socket';
 import EmojiPicker from 'emoji-picker-react';
 
-export default function MessageInput({ chatId }) {
+export default function MessageInput({ chatId, replyingTo, onCancelReply }) {
   const [message, setMessage] = useState('');
   const [uploading, setUploading] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -22,20 +22,82 @@ export default function MessageInput({ chatId }) {
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
   const emojiPickerRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
+  const isTypingRef = useRef(false);
+
+  // Emit typing indicators
+  const emitTypingStart = useCallback(() => {
+    const socket = getSocket();
+    if (socket && !isTypingRef.current) {
+      socket.emit('typing-start', { chatId });
+      isTypingRef.current = true;
+    }
+  }, [chatId]);
+
+  const emitTypingStop = useCallback(() => {
+    const socket = getSocket();
+    if (socket && isTypingRef.current) {
+      socket.emit('typing-stop', { chatId });
+      isTypingRef.current = false;
+    }
+  }, [chatId]);
+
+  // Handle input change with typing indicator
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    setMessage(value);
+
+    if (value.trim()) {
+      emitTypingStart();
+
+      // Clear existing timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+
+      // Set new timeout to stop typing after 2 seconds of inactivity
+      typingTimeoutRef.current = setTimeout(() => {
+        emitTypingStop();
+      }, 2000);
+    } else {
+      emitTypingStop();
+    }
+  };
+
+  // Cleanup on unmount or chat change
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      emitTypingStop();
+    };
+  }, [chatId, emitTypingStop]);
 
   const handleSend = async (e) => {
     e.preventDefault();
     if (!message.trim()) return;
 
+    // Stop typing indicator
+    emitTypingStop();
+
     try {
-      const response = await api.post('/messages', {
+      const payload = {
         text: message,
         chatId,
         type: 'text',
-      });
+      };
+      
+      // Only add replyTo if it exists
+      if (replyingTo && replyingTo._id) {
+        payload.replyTo = replyingTo._id;
+      }
+
+      const response = await api.post('/messages', payload);
 
       addMessage(chatId, response.data.data);
       setMessage('');
+      if (onCancelReply) onCancelReply();
       inputRef.current?.focus();
     } catch (error) {
       toast.error('Failed to send message');
@@ -43,11 +105,8 @@ export default function MessageInput({ chatId }) {
     }
   };
 
-  const handleTyping = () => {
-    const socket = getSocket();
-    if (socket) {
-      emitEvent('typing', { chatId });
-    }
+  const handleCancelReply = () => {
+    if (onCancelReply) onCancelReply();
   };
 
   const handleEmojiClick = (emojiObject) => {
@@ -195,6 +254,30 @@ export default function MessageInput({ chatId }) {
       {/* Regular Message Input */}
       {!selectedFile && (
         <div className="p-4">
+          {/* Reply Preview */}
+          {replyingTo && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-2 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg border-l-4 border-blue-500 flex justify-between items-start"
+            >
+              <div className="flex-1">
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold">
+                  Replying to {replyingTo.senderId?.name || 'User'}
+                </p>
+                <p className="text-sm text-gray-700 dark:text-gray-300 truncate mt-1">
+                  {replyingTo.text}
+                </p>
+              </div>
+              <button
+                onClick={handleCancelReply}
+                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition"
+              >
+                <X size={16} />
+              </button>
+            </motion.div>
+          )}
+
           {/* Emoji Picker */}
           {showEmojiPicker && (
             <motion.div
@@ -252,10 +335,7 @@ export default function MessageInput({ chatId }) {
                 ref={inputRef}
                 type="text"
                 value={message}
-                onChange={(e) => {
-                  setMessage(e.target.value);
-                  handleTyping();
-                }}
+                onChange={handleInputChange}
                 onKeyPress={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
