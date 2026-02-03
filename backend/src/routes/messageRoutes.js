@@ -8,6 +8,8 @@ const {
   uploadFile,
   editMessage,
   deleteMessage,
+  deleteMessageForMe,
+  deleteMessageForEveryone,
 } = require('../controllers/messageController');
 
 const router = express.Router();
@@ -46,8 +48,18 @@ router.put('/chat/:chatId/mark-all-seen', markAllMessagesAsSeen);
 router.put('/:messageId/edit', editMessage);
 
 // @route   DELETE /api/messages/:messageId
-// @desc    Delete message
+// @desc    Delete message (for me only)
 // @access  Private
 router.delete('/:messageId', deleteMessage);
+
+// @route   DELETE /api/messages/:messageId/delete-for-me
+// @desc    Delete message for me only
+// @access  Private
+router.delete('/:messageId/delete-for-me', deleteMessageForMe);
+
+// @route   DELETE /api/messages/:messageId/delete-for-everyone
+// @desc    Delete message for everyone
+// @access  Private
+router.delete('/:messageId/delete-for-everyone', deleteMessageForEveryone);
 
 module.exports = router;

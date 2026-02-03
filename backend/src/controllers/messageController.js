@@ -166,15 +166,22 @@ const getMessages = async (req, res) => {
 
     const skip = (page - 1) * limit;
 
-    const messages = await Message.find({ chatId })
+    // Filter out messages deleted for current user
+    const messages = await Message.find({ 
+      chatId,
+      deletedFor: { $ne: userId }
+    })
       .populate('senderId', '-password')
       .populate('seenBy', '-password')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
 
-    // Get total count
-    const totalMessages = await Message.countDocuments({ chatId });
+    // Get total count (excluding messages deleted for user)
+    const totalMessages = await Message.countDocuments({ 
+      chatId,
+      deletedFor: { $ne: userId }
+    });
 
     return res.status(200).json({
       success: true,
@@ -472,10 +479,10 @@ const editMessage = async (req, res) => {
   }
 };
 
-// @desc    Delete message
-// @route   DELETE /api/messages/:messageId
+// @desc    Delete message for me
+// @route   DELETE /api/messages/:messageId/delete-for-me
 // @access  Private
-const deleteMessage = async (req, res) => {
+const deleteMessageForMe = async (req, res) => {
   try {
     const { messageId } = req.params;
     const userId = req.user.id;
@@ -488,15 +495,55 @@ const deleteMessage = async (req, res) => {
       });
     }
 
-    // Only sender can delete
-    if (message.senderId.toString() !== userId) {
-      return res.status(403).json({
+    // Add user to deletedFor array if not already there
+    if (!message.deletedFor.includes(userId)) {
+      message.deletedFor.push(userId);
+      await message.save();
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Message deleted for you',
+      data: {
+        _id: message._id,
+        chatId: message.chatId,
+        deletedForMe: true,
+      },
+    });
+  } catch (error) {
+    console.error('Delete for me error:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Delete message for everyone
+// @route   DELETE /api/messages/:messageId/delete-for-everyone
+// @access  Private
+const deleteMessageForEveryone = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const userId = req.user.id;
+
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return res.status(404).json({
         success: false,
-        message: 'You can only delete your own messages',
+        message: 'Message not found',
       });
     }
 
-    // Mark as deleted
+    // Only sender can delete for everyone
+    if (message.senderId.toString() !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only delete your own messages for everyone',
+      });
+    }
+
+    // Mark as deleted for everyone
     message.isDeleted = true;
     message.deletedAt = new Date();
     message.text = 'This message was deleted';
@@ -517,16 +564,21 @@ const deleteMessage = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: 'Message deleted',
+      message: 'Message deleted for everyone',
       data: responseData,
     });
   } catch (error) {
-    console.error('Delete message error:', error.message);
+    console.error('Delete for everyone error:', error.message);
     return res.status(500).json({
       success: false,
       message: error.message,
     });
   }
+};
+
+// Legacy endpoint - now delete for me only
+const deleteMessage = async (req, res) => {
+  return deleteMessageForMe(req, res);
 };
 
 module.exports = {
@@ -537,4 +589,6 @@ module.exports = {
   uploadFile,
   editMessage,
   deleteMessage,
+  deleteMessageForMe,
+  deleteMessageForEveryone,
 };
