@@ -12,21 +12,14 @@ export default function ChatList({ searchQuery, showGroups = false }) {
   const { user: currentUser } = useAuthStore();
   const { users } = useUserStore();
 
-  // Debug log
+  // Debug: Log current state
   if (chats && chats.length > 0) {
-    console.log('ChatList Debug - First chat members:', {
-      chatId: chats[0]._id,
-      isGroup: chats[0].isGroup,
-      memberCount: chats[0].members?.length,
-      members: chats[0].members?.map(m => ({
-        _id: m._id,
-        name: m.name,
-        type: typeof m,
-        isString: typeof m === 'string'
-      })),
-      currentUserId: currentUser?._id,
-      currentUserName: currentUser?.name
-    });
+    const groupChats = chats.filter(c => c.isGroup ?? (c.members?.length > 2));
+    const oneToOneChats = chats.filter(c => !(c.isGroup ?? (c.members?.length > 2)));
+    console.log(`📋 ChatList [showGroups=${showGroups}]: ${chats.length} total | ${groupChats.length} groups | ${oneToOneChats.length} one-to-one | search="${searchQuery}"`);
+    if (showGroups && groupChats.length > 0) {
+      console.log('   Groups:', groupChats.map(g => ({ name: g.name, members: g.members?.length, isGroup: g.isGroup })));
+    }
   }
 
   const getOtherMember = (chat) => {
@@ -55,13 +48,16 @@ export default function ChatList({ searchQuery, showGroups = false }) {
   // Filter chats based on type (groups or one-to-one)
   const filteredChats = (chats || [])
     .filter((chat) => {
+      // Ensure isGroup is set (fallback for legacy data)
+      const isGroup = chat.isGroup ?? (chat.members?.length > 2); // If isGroup not set, assume group if >2 members
+      
       // Filter by group type
-      if (showGroups && !chat.isGroup) return false;
-      if (!showGroups && chat.isGroup) return false;
+      if (showGroups && !isGroup) return false;
+      if (!showGroups && isGroup) return false;
       
       // For one-to-one chats, get the other member's name
       let name = '';
-      if (chat.isGroup) {
+      if (isGroup) {
         name = chat.name || 'Group';
       } else {
         // Find the other member (not current user)
@@ -78,36 +74,8 @@ export default function ChatList({ searchQuery, showGroups = false }) {
       return timeB - timeA;
     });
 
-  // For Chats tab, also show available users to chat with
-  let displayList = filteredChats;
-  if (!showGroups) {
-    // Get users that aren't already in chats (excluding current user)
-    const usersInChats = new Set(
-      chats
-        .filter(chat => !chat.isGroup)
-        .flatMap(chat => chat.members || [])
-        .map(member => (typeof member === 'object' ? member._id : member))
-    );
-
-    const availableUsers = (users || [])
-      .filter(user => 
-        user._id !== currentUser?._id && 
-        !usersInChats.has(user._id) &&
-        user.name.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-      .map(user => ({
-        _id: `temp-${user._id}`,
-        tempUser: user,
-        isTemp: true,
-        members: [currentUser, user],
-        isGroup: false,
-        name: user.name,
-        lastMessage: null,
-        createdAt: new Date(),
-      }));
-
-    displayList = [...filteredChats, ...availableUsers];
-  }
+  // Display only real chats
+  const displayList = filteredChats;
 
   return (
     <div className="space-y-2 p-4">
@@ -116,7 +84,7 @@ export default function ChatList({ searchQuery, showGroups = false }) {
         <p className="text-xs font-medium text-blue-700 dark:text-blue-400">
           {showGroups 
             ? `👥 Groups: ${filteredChats.length}` 
-            : `💬 Chats: ${filteredChats.length} | 👤 New: ${displayList.length - filteredChats.length}`
+            : `💬 Chats: ${filteredChats.length}`
           }
         </p>
       </div>
@@ -133,10 +101,11 @@ export default function ChatList({ searchQuery, showGroups = false }) {
         </div>
       ) : (
         displayList.map((chat, index) => {
-          const otherMember = chat.tempUser || getOtherMember(chat);
-          const displayName = chat.isGroup ? chat.name : otherMember?.name || 'Unknown';
-          const isOnline = !chat.isGroup && otherMember?.isOnline;
-          const isNewUser = chat.isTemp;
+          // Ensure isGroup is set
+          const isGroup = chat.isGroup ?? (chat.members?.length > 2);
+          const otherMember = getOtherMember(chat);
+          const displayName = isGroup ? chat.name : otherMember?.name || 'Unknown';
+          const isOnline = !isGroup && otherMember?.isOnline;
           
           return (
             <motion.button
@@ -150,8 +119,6 @@ export default function ChatList({ searchQuery, showGroups = false }) {
                   ? 'bg-blue-500 text-white'
                   : isOnline
                   ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/30 text-gray-900 dark:text-white'
-                  : isNewUser
-                  ? 'bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 hover:bg-purple-100 dark:hover:bg-purple-900/30 text-gray-900 dark:text-white'
                   : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white'
               }`}
             >
@@ -167,23 +134,15 @@ export default function ChatList({ searchQuery, showGroups = false }) {
                   {isOnline && activeChat !== chat._id && (
                     <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-700"></div>
                   )}
-                  {isNewUser && (
-                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-purple-500 rounded-full border-2 border-white dark:border-gray-700"></div>
-                  )}
                 </div>
                 <div className="flex-1 min-w-0 text-left">
                   <div className="flex items-center gap-2">
                     <p className="font-semibold truncate">{displayName}</p>
-                    {chat.isGroup && (
+                    {isGroup && (
                       <span className={`text-xs px-1.5 py-0.5 rounded ${
                         activeChat === chat._id ? 'bg-blue-400' : 'bg-purple-500 text-white'
                       }`}>
                         {chat.members?.length || 0}
-                      </span>
-                    )}
-                    {isNewUser && (
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500 text-white">
-                        New
                       </span>
                     )}
                   </div>

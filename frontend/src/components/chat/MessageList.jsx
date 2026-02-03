@@ -20,16 +20,6 @@ export default function MessageList({ chatId, loading }) {
   const chatMessages = messages[chatId] || [];
 
   useEffect(() => {
-    if (currentUser) {
-      console.log('👤 Current user loaded in MessageList:', {
-        id: currentUser._id,
-        name: currentUser.name,
-        email: currentUser.email
-      });
-    }
-  }, [currentUser]);
-
-  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages]);
 
@@ -104,19 +94,6 @@ export default function MessageList({ chatId, loading }) {
           // Determine if message is sent by current user
           const isSent = !!(senderIdStr && currentUserIdStr && senderIdStr === currentUserIdStr);
           
-          // Debug logging (first message only to avoid spam)
-          if (index === 0) {
-            console.log('🔍 Message Debug:', {
-              messageId: message._id,
-              senderIdStr,
-              currentUserIdStr,
-              isSent,
-              senderIdType: typeof message.senderId,
-              senderIdValue: message.senderId,
-              currentUserType: typeof currentUser,
-              currentUserValue: currentUser
-            });
-          }
           const isFile = message.type !== 'text' || message.fileUrl;
           const isEditing = editingId === message._id;
           const isDeleted = message.isDeleted;

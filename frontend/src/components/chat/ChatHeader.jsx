@@ -23,17 +23,6 @@ export default function ChatHeader({ chatId }) {
     // For one-to-one chats, find the other user (not the current user)
     const otherUser = chat.isGroup ? null : chat.members.find((m) => m._id !== currentUser?._id);
     
-    // Debug log
-    console.log('ChatHeader Debug:', {
-      chatId,
-      activeChat,
-      chatFound: !!chat,
-      isGroup: chat?.isGroup,
-      members: chat?.members?.map(m => ({ _id: m._id, name: m.name })),
-      currentUserId: currentUser?._id,
-      otherUser: otherUser ? { _id: otherUser._id, name: otherUser.name } : null
-    });
-
     // Set header data
     const displayName = chat.isGroup ? chat.name : (otherUser?.name || 'User');
     const displayAvatar = displayName || 'CH';

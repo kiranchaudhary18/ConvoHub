@@ -62,7 +62,7 @@ export default function Sidebar() {
         {/* Tabs */}
         {sidebarOpen && (
           <div className="flex gap-2 p-4 border-b border-gray-200 dark:border-gray-700">
-            {['chats', 'groups'].map((tab) => (
+            {['chats', 'users', 'groups'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -72,7 +72,7 @@ export default function Sidebar() {
                     : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                 }`}
               >
-                {tab}
+                {tab === 'users' ? 'New' : tab}
               </button>
             ))}
           </div>
@@ -83,6 +83,7 @@ export default function Sidebar() {
           {sidebarOpen && (
             <>
               {activeTab === 'chats' && <ChatList searchQuery={searchQuery} showGroups={false} />}
+              {activeTab === 'users' && <UsersList searchQuery={searchQuery} />}
               {activeTab === 'groups' && <ChatList searchQuery={searchQuery} showGroups={true} />}
             </>
           )}

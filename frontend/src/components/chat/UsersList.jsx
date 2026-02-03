@@ -9,6 +9,7 @@ import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import { useChatStore } from '@/stores/chatStore';
 import { useUIStore } from '@/stores/uiStore';
+import { getSocket, initializeSocket } from '@/lib/socket';
 
 export default function UsersList({ searchQuery }) {
   const { users } = useUserStore();
@@ -40,6 +41,12 @@ export default function UsersList({ searchQuery }) {
       // Set active chat and switch to chats tab
       setActiveChat(chat._id);
       setActiveTab('chats');
+
+      // Ensure socket is connected and join the chat room
+      const socket = initializeSocket();
+      if (socket) {
+        socket.emit('join-chat', chat._id);
+      }
       
       toast.success('Chat opened');
     } catch (error) {

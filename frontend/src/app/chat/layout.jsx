@@ -71,7 +71,6 @@ export default function ChatLayout({ children }) {
 
       // Listen for new one-to-one chats
       const handleNewChat = (data) => {
-        console.log('📨 New chat received:', data);
         if (data.chat) {
           addChatToList(data.chat);
         }
@@ -79,7 +78,6 @@ export default function ChatLayout({ children }) {
 
       // Listen for new groups
       const handleNewGroup = (data) => {
-        console.log('👥 New group received:', data);
         if (data.chat) {
           addChatToList(data.chat);
         }

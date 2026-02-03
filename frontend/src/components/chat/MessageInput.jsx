@@ -34,12 +34,6 @@ export default function MessageInput({ chatId }) {
         type: 'text',
       });
 
-      console.log('📤 Message sent:', {
-        response: response.data,
-        currentUser,
-        chatId
-      });
-
       addMessage(chatId, response.data.data);
       setMessage('');
       inputRef.current?.focus();
