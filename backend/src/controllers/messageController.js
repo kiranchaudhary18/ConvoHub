@@ -77,8 +77,8 @@ const sendMessage = async (req, res) => {
 
       // If it's the first message, notify all chat members about the new chat
       if (isFirstMessage) {
-        chat.members.forEach((memberId) => {
-          io.to(memberId).emit('new-chat', {
+        updatedChat.members.forEach((memberId) => {
+          io.to(`user-${memberId}`).emit('new-chat', {
             chat: updatedChat.toObject(),
             createdBy: senderId,
           });

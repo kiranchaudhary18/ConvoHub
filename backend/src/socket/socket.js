@@ -29,6 +29,9 @@ const initializeSocket = (io) => {
       // Store socket connection
       userSocketMap.set(userId, socket.id);
 
+      // Join a personal room for this user (so we can emit to them directly)
+      socket.join(`user-${userId}`);
+
       // Update user online status
       await User.findByIdAndUpdate(userId, { isOnline: true });
 

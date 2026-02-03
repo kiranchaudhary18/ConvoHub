@@ -52,13 +52,13 @@ const createOrGetOneToOneChat = async (req, res) => {
     const io = req.app.get('io');
     if (io) {
       // Notify the recipient about the new chat
-      io.to(recipientId).emit('new-chat', {
+      io.to(`user-${recipientId}`).emit('new-chat', {
         chat: chat.toObject(),
         createdBy: userId,
       });
       
       // Notify the sender about the new chat
-      io.to(userId).emit('new-chat', {
+      io.to(`user-${userId}`).emit('new-chat', {
         chat: chat.toObject(),
         createdBy: userId,
       });
@@ -120,7 +120,7 @@ const createGroupChat = async (req, res) => {
     if (io) {
       // Notify all members about the new group
       membersArray.forEach((memberId) => {
-        io.to(memberId).emit('new-group', {
+        io.to(`user-${memberId}`).emit('new-group', {
           chat: populatedChat.toObject(),
           createdBy: userId,
         });
