@@ -41,21 +41,26 @@ export default function SendInviteModal() {
     setLoading(true);
     try {
       const response = await api.post('/invites/send-direct', {
-        email,
-        invitedById: user?._id,
+        email: email.trim(),
       });
 
-      toast.success('Invitation sent successfully!');
-      setInviteSent(true);
-      setEmail('');
-      
-      // Reset after 3 seconds
-      setTimeout(() => {
-        setInviteSent(false);
-        handleClose();
-      }, 2000);
+      if (response.data?.success) {
+        toast.success(response.data?.message || 'Invitation sent successfully!');
+        setInviteSent(true);
+        setEmail('');
+        
+        // Reset after 2 seconds
+        setTimeout(() => {
+          setInviteSent(false);
+          handleClose();
+        }, 2000);
+      } else {
+        toast.error(response.data?.message || 'Failed to send invitation');
+      }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to send invitation');
+      const errorMsg = error.response?.data?.message || error.message || 'Failed to send invitation';
+      console.error('Invite error:', error);
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
