@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Menu, LogOut, Moon, Sun, Plus, Search } from 'lucide-react';
+import { Menu, LogOut, Moon, Sun, Plus, Search, Users } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useChatStore } from '@/stores/chatStore';
@@ -10,6 +10,7 @@ import ChatList from './ChatList';
 import UsersList from './UsersList';
 import GroupModal from './GroupModal';
 import GroupMembersModal from './GroupMembersModal';
+import SendInviteModal from './SendInviteModal';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { getInitials } from '@/lib/utils';
@@ -17,7 +18,7 @@ import { getInitials } from '@/lib/utils';
 export default function Sidebar() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
-  const { darkMode, toggleDarkMode, activeTab, setActiveTab, sidebarOpen, toggleSidebar, setShowGroupModal, isMobileSidebarOpen, toggleMobileSidebar, closeMobileSidebar } = useUIStore();
+  const { darkMode, toggleDarkMode, activeTab, setActiveTab, sidebarOpen, toggleSidebar, setShowGroupModal, isMobileSidebarOpen, toggleMobileSidebar, closeMobileSidebar, setShowSendInviteModal } = useUIStore();
   const { chats, activeChat } = useChatStore();
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -35,12 +36,20 @@ export default function Sidebar() {
           <div className="p-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-4">
               <h1 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">ConvoHub</h1>
-              <button
-                onClick={closeMobileSidebar}
-                className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition"
-              >
-                <Menu size={20} />
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={toggleDarkMode}
+                  className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition"
+                >
+                  {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+                </button>
+                <button
+                  onClick={closeMobileSidebar}
+                  className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition"
+                >
+                  <Menu size={20} />
+                </button>
+              </div>
             </div>
 
             <div className="relative">
@@ -81,23 +90,26 @@ export default function Sidebar() {
 
           {/* Footer */}
           <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setShowGroupModal(true)}
-              className="w-full flex items-center justify-center gap-2 bg-gradient-primary hover:shadow-lg text-white py-2 rounded-lg font-medium transition"
-            >
-              <Plus size={20} />
-              New Group
-            </motion.button>
-
             <div className="flex gap-2">
-              <button
-                onClick={toggleDarkMode}
-                className="flex-1 p-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg transition flex items-center justify-center"
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowGroupModal(true)}
+                className="flex-1 flex items-center justify-center gap-2 bg-gradient-primary hover:shadow-lg text-white py-2 rounded-lg font-medium transition text-sm"
               >
-                {darkMode ? <Sun size={20} /> : <Moon size={20} />}
-              </button>
+                <Plus size={18} />
+                New Group
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowSendInviteModal(true)}
+                className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:shadow-lg text-white py-2 rounded-lg font-medium transition text-sm"
+              >
+                <Users size={18} />
+                Invite
+              </motion.button>
             </div>
 
             <div className="flex items-center gap-3 p-3 bg-gray-200 dark:bg-gray-700 rounded-lg">
@@ -129,12 +141,20 @@ export default function Sidebar() {
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-4">
             {sidebarOpen && <h1 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">ConvoHub</h1>}
-            <button
-              onClick={toggleSidebar}
-              className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition"
-            >
-              <Menu size={20} />
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={toggleDarkMode}
+                className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition"
+              >
+                {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+              </button>
+              <button
+                onClick={toggleSidebar}
+                className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition"
+              >
+                <Menu size={20} />
+              </button>
+            </div>
           </div>
 
           {sidebarOpen && (
@@ -185,23 +205,26 @@ export default function Sidebar() {
         <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
           {sidebarOpen && (
             <>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setShowGroupModal(true)}
-                className="w-full flex items-center justify-center gap-2 bg-gradient-primary hover:shadow-lg text-white py-2 rounded-lg font-medium transition"
-              >
-                <Plus size={20} />
-                New Group
-              </motion.button>
-
               <div className="flex gap-2">
-                <button
-                  onClick={toggleDarkMode}
-                  className="flex-1 p-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg transition flex items-center justify-center"
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowGroupModal(true)}
+                  className="flex-1 flex items-center justify-center gap-2 bg-gradient-primary hover:shadow-lg text-white py-2 rounded-lg font-medium transition text-sm"
                 >
-                  {darkMode ? <Sun size={20} /> : <Moon size={20} />}
-                </button>
+                  <Plus size={18} />
+                  Group
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowSendInviteModal(true)}
+                  className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:shadow-lg text-white py-2 rounded-lg font-medium transition text-sm"
+                >
+                  <Users size={18} />
+                  Invite
+                </motion.button>
               </div>
 
               <div className="flex items-center gap-3 p-3 bg-gray-200 dark:bg-gray-700 rounded-lg">
@@ -230,6 +253,7 @@ export default function Sidebar() {
 
       <GroupModal />
       <GroupMembersModal />
+      <SendInviteModal />
     </>
   );
 }
