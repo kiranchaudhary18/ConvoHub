@@ -1,0 +1,14 @@
+# Test invite API with curl
+curl -X POST http://localhost:5000/api/invites/send-direct \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "email": "test@example.com"
+  }'
+
+# Test without authentication first to see what happens
+curl -X POST http://localhost:5000/api/invites/send-direct \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "test@example.com"
+  }'

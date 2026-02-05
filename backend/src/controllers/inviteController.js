@@ -244,8 +244,152 @@ const verifyInvite = async (req, res) => {
   }
 };
 
+// @desc    Send direct invite to user (without specific chat)
+// @route   POST /api/invites/send-direct
+// @access  Private
+const sendDirectInvite = async (req, res) => {
+  try {
+    console.log('=== sendDirectInvite API called ===');
+    const { email } = req.body;
+    const invitedById = req.user.id;
+
+    console.log('Input email:', email);
+    console.log('Inviter ID:', invitedById);
+    console.log('Email config exists:', !!process.env.EMAIL_SERVICE);
+
+    // Validate email
+    if (!email || typeof email !== 'string' || !email.includes('@')) {
+      console.log('Email validation failed');
+      return res.status(400).json({
+        success: false,
+        message: 'Valid email is required',
+      });
+    }
+
+    const emailLower = email.toLowerCase().trim();
+    console.log('Processing email:', emailLower);
+
+    // Check if user already exists
+    console.log('Checking if user exists...');
+    const existingUser = await User.findOne({ email: emailLower });
+    if (existingUser) {
+      console.log('User already exists:', existingUser._id);
+      return res.status(200).json({
+        success: true,
+        message: 'User already registered. You can start chatting!',
+      });
+    }
+
+    // Get inviter details
+    console.log('Fetching inviter...');
+    const inviter = await User.findById(invitedById);
+    if (!inviter) {
+      console.log('Inviter not found');
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    console.log('Inviter:', inviter.name);
+
+    // Check if invite already exists and is not expired
+    console.log('Checking for existing invite...');
+    let existingInvite = await Invite.findOne({
+      email: emailLower,
+      chatId: null,
+      used: false,
+      expiresAt: { $gt: new Date() },
+    });
+
+    if (existingInvite) {
+      console.log('Invite already exists, reusing token:', existingInvite.token);
+      const frontendURL = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const inviteLink = `${frontendURL}/register?invite=${existingInvite.token}`;
+      console.log('Sending email to existing invite recipient');
+      
+      const emailSent = await sendInviteEmail(emailLower, inviteLink, inviter.name);
+      if (!emailSent) {
+        console.error('Failed to send email');
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to send invitation email. Please try again.',
+        });
+      }
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Invitation sent successfully! Check your email for the link.',
+      });
+    }
+
+    // Create new invite
+    console.log('Creating new invite record...');
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    
+    const newInvite = await Invite.create({
+      email: emailLower,
+      invitedBy: invitedById,
+      chatId: null,
+      expiresAt: expiresAt,
+      used: false,
+    });
+
+    console.log('Invite created:', newInvite._id, 'Token:', newInvite.token);
+
+    // Generate invite link
+    const frontendURL = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const inviteLink = `${frontendURL}/register?invite=${newInvite.token}`;
+
+    console.log('Sending invitation email to:', emailLower);
+    console.log('Invite link:', inviteLink);
+
+    // Send email
+    const emailSent = await sendInviteEmail(emailLower, inviteLink, inviter.name);
+    
+    if (!emailSent) {
+      console.error('Email sending failed');
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send invitation email. Please try again.',
+      });
+    }
+
+    console.log('Email sent successfully!');
+
+    return res.status(201).json({
+      success: true,
+      message: 'Invitation sent successfully! Check your email for the link.',
+    });
+  } catch (error) {
+    console.error('=== sendDirectInvite ERROR ===');
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Error code:', error.code);
+    console.error('Full error:', error);
+    
+    // Provide helpful error messages for common issues
+    let errorMessage = 'Failed to send invitation';
+    
+    if (error.code === 11000) {
+      errorMessage = 'An invite has already been sent to this email';
+    } else if (error.message.includes('email')) {
+      errorMessage = 'Invalid email address';
+    } else if (error.message.includes('validation')) {
+      errorMessage = 'Invalid data provided';
+    }
+    
+    return res.status(500).json({
+      success: false,
+      message: errorMessage,
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
 module.exports = {
   sendInvite,
+  sendDirectInvite,
   useInvite,
   verifyInvite,
 };

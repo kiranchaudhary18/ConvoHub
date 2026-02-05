@@ -17,7 +17,7 @@ const inviteSchema = new mongoose.Schema(
     chatId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Chat',
-      required: true,
+      default: null,
     },
     token: {
       type: String,
