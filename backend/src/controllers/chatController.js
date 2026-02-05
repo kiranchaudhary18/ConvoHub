@@ -252,6 +252,214 @@ const addMemberToGroup = async (req, res) => {
   }
 };
 
+// @desc    Delete group (admin only)
+// @route   DELETE /api/chats/:chatId
+// @access  Private
+const deleteGroup = async (req, res) => {
+  try {
+    const { chatId } = req.params;
+    const userId = req.user.id;
+
+    const chat = await Chat.findById(chatId);
+    if (!chat) {
+      return res.status(404).json({
+        success: false,
+        message: 'Chat not found',
+      });
+    }
+
+    if (!chat.isGroup) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot delete a one-to-one chat',
+      });
+    }
+
+    // Check if user is admin
+    if (chat.admin.toString() !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only admin can delete the group',
+      });
+    }
+
+    // Get all members before deleting
+    const allMembers = chat.members;
+
+    // Delete the chat
+    await Chat.findByIdAndDelete(chatId);
+
+    // Emit socket events for real-time updates
+    const io = req.app.get('io');
+    if (io) {
+      // Notify all members that the group was deleted
+      allMembers.forEach((memberId) => {
+        io.to(`user-${memberId}`).emit('group-deleted', {
+          chatId,
+          deletedBy: userId,
+          deletedByName: req.user.name,
+          groupName: chat.name,
+        });
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Group deleted successfully',
+    });
+  } catch (error) {
+    console.error('Delete group error:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Leave group (member removes themselves) - Updated to allow admin
+// @route   PUT /api/chats/:chatId/leave
+// @access  Private
+const leaveGroup = async (req, res) => {
+  try {
+    const { chatId } = req.params;
+    const userId = req.user.id;
+
+    const chat = await Chat.findById(chatId);
+    if (!chat) {
+      return res.status(404).json({
+        success: false,
+        message: 'Chat not found',
+      });
+    }
+
+    if (!chat.isGroup) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot leave a one-to-one chat',
+      });
+    }
+
+    // Check if user is a member
+    if (!chat.members.includes(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'You are not a member of this group',
+      });
+    }
+
+    const isAdmin = chat.admin.toString() === userId;
+    const remainingMembers = chat.members.filter((id) => id.toString() !== userId);
+
+    // If admin is leaving and there are other members, transfer admin to first member
+    if (isAdmin && remainingMembers.length > 0) {
+      chat.admin = remainingMembers[0];
+      chat.members = remainingMembers;
+      await chat.save();
+
+      const updatedChat = await chat.populate('members admin', '-password').populate('lastMessage');
+
+      // Emit socket events for real-time updates
+      const io = req.app.get('io');
+      if (io) {
+        // Notify all remaining members about admin transfer
+        updatedChat.members.forEach((member) => {
+          io.to(`user-${member._id}`).emit('admin-transferred', {
+            chatId,
+            chat: updatedChat.toObject(),
+            oldAdminId: userId,
+            oldAdminName: req.user.name,
+            newAdminId: updatedChat.admin._id,
+            newAdminName: updatedChat.admin.name,
+          });
+        });
+        
+        // Notify the admin who left
+        io.to(`user-${userId}`).emit('left-group', {
+          chatId,
+          chat: updatedChat.toObject(),
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'You left the group and admin was transferred',
+        chat: updatedChat,
+      });
+    }
+    // If admin is leaving and no members left, delete the group
+    else if (isAdmin && remainingMembers.length === 0) {
+      await Chat.findByIdAndDelete(chatId);
+
+      // Emit socket events for real-time updates
+      const io = req.app.get('io');
+      if (io) {
+        // Notify the admin that the group was deleted
+        io.to(`user-${userId}`).emit('group-deleted', {
+          chatId,
+          deletedBy: userId,
+          deletedByName: req.user.name,
+          groupName: chat.name,
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'You left the group and it was deleted',
+      });
+    }
+    // Regular member leaving
+    else {
+      // Remove user from members
+      chat.members = chat.members.filter((id) => id.toString() !== userId);
+      await chat.save();
+
+      const updatedChat = await chat.populate('members admin', '-password').populate('lastMessage');
+
+      // Emit socket events for real-time updates
+      const io = req.app.get('io');
+      if (io) {
+        console.log('🔌 Socket.io available, emitting events for regular member leaving');
+        console.log('🔌 User leaving:', userId);
+        console.log('🔌 Remaining members:', updatedChat.members.map(m => m._id));
+        
+        // Notify all remaining members about the member leaving
+        updatedChat.members.forEach((member) => {
+          console.log('🔌 Emitting member-left-group to user:', member._id);
+          io.to(`user-${member._id}`).emit('member-left-group', {
+            chatId,
+            chat: updatedChat.toObject(),
+            leftMemberId: userId,
+            leftMemberName: req.user.name,
+          });
+        });
+        
+        // Notify the user who left
+        console.log('🔌 Emitting left-group to user who left:', userId);
+        io.to(`user-${userId}`).emit('left-group', {
+          chatId,
+          chat: updatedChat.toObject(),
+        });
+        
+        console.log('🔌 Socket events emitted successfully');
+      } else {
+        console.log('❌ Socket.io not available');
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'You left the group successfully',
+        chat: updatedChat,
+      });
+    }
+  } catch (error) {
+    console.error('Leave group error:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 // @desc    Remove member from group chat
 // @route   PUT /api/chats/:chatId/remove-member
 // @access  Private
@@ -277,11 +485,41 @@ const removeMemberFromGroup = async (req, res) => {
       });
     }
 
+    // Admin cannot remove themselves
+    if (chat.admin.toString() === memberId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Admin cannot remove themselves. Please delete the group instead.',
+      });
+    }
+
     // Remove member
     chat.members = chat.members.filter((id) => id.toString() !== memberId);
     await chat.save();
 
     const updatedChat = await chat.populate('members admin', '-password').populate('lastMessage');
+
+    // Emit socket events for real-time updates
+    const io = req.app.get('io');
+    if (io) {
+      // Notify all remaining members about the member removal
+      updatedChat.members.forEach((member) => {
+        io.to(`user-${member._id}`).emit('member-removed-from-group', {
+          chatId,
+          chat: updatedChat.toObject(),
+          removedMemberId: memberId,
+          removedBy: userId,
+        });
+      });
+      
+      // Notify the removed member
+      io.to(`user-${memberId}`).emit('removed-from-group', {
+        chatId,
+        chat: updatedChat.toObject(),
+        removedBy: userId,
+        removedByName: req.user.name,
+      });
+    }
 
     return res.status(200).json({
       success: true,
@@ -303,4 +541,6 @@ module.exports = {
   getAllChats,
   addMemberToGroup,
   removeMemberFromGroup,
+  leaveGroup,
+  deleteGroup,
 };

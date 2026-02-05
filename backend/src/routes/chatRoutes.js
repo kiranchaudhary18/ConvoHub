@@ -6,6 +6,8 @@ const {
   getAllChats,
   addMemberToGroup,
   removeMemberFromGroup,
+  leaveGroup,
+  deleteGroup,
 } = require('../controllers/chatController');
 
 const router = express.Router();
@@ -37,5 +39,15 @@ router.put('/:chatId/add-member', addMemberToGroup);
 // @desc    Remove member from group chat
 // @access  Private
 router.put('/:chatId/remove-member', removeMemberFromGroup);
+
+// @route   PUT /api/chats/:chatId/leave
+// @desc    Leave group (member removes themselves)
+// @access  Private
+router.put('/:chatId/leave', leaveGroup);
+
+// @route   DELETE /api/chats/:chatId
+// @desc    Delete group (admin only)
+// @access  Private
+router.delete('/:chatId', deleteGroup);
 
 module.exports = router;
