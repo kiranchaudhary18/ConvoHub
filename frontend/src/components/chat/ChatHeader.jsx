@@ -6,17 +6,21 @@ import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
 import { motion } from 'framer-motion';
 import { getInitials, formatLastSeen } from '@/lib/utils';
-import { Menu, ArrowLeft, Search } from 'lucide-react';
+import { Menu, ArrowLeft, Search, Users } from 'lucide-react';
 
 export default function ChatHeader({ chatId, onSearchToggle }) {
   const { chats, activeChat, setActiveChat } = useChatStore();
   const { user: currentUser } = useAuthStore();
-  const { toggleMobileSidebar, isMobileSidebarOpen } = useUIStore();
+  const { toggleMobileSidebar, isMobileSidebarOpen, setShowGroupMembersModal } = useUIStore();
   const [headerData, setHeaderData] = useState(null);
 
   const handleBackClick = () => {
     // On mobile, close current chat to show sidebar
     setActiveChat(null);
+  };
+
+  const handleShowGroupMembers = () => {
+    setShowGroupMembersModal(true);
   };
 
   useEffect(() => {
@@ -91,6 +95,17 @@ export default function ChatHeader({ chatId, onSearchToggle }) {
       </div>
 
       <div className="flex items-center gap-2">
+        {/* Group members button - only show for group chats */}
+        {headerData.isGroup && (
+          <button
+            onClick={handleShowGroupMembers}
+            className="p-2 hover:bg-white/50 dark:hover:bg-gray-700/50 rounded-lg transition"
+            title="Group members"
+          >
+            <Users size={20} />
+          </button>
+        )}
+
         {/* Search button */}
         <button
           onClick={onSearchToggle}

@@ -1,0 +1,24 @@
+# *
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api
+Disallow: /private
+Disallow: /uploads
+Disallow: /_next
+Disallow: /chat/*
+
+# Googlebot
+User-agent: Googlebot
+Allow: /
+
+# Bingbot
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
+
+# Host
+Host: https://convohub.in
+
+# Sitemaps
+Sitemap: https://convohub.in/sitemap.xml

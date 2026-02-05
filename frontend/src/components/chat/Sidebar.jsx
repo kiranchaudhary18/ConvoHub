@@ -9,6 +9,7 @@ import { useChatStore } from '@/stores/chatStore';
 import ChatList from './ChatList';
 import UsersList from './UsersList';
 import GroupModal from './GroupModal';
+import GroupMembersModal from './GroupMembersModal';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { getInitials } from '@/lib/utils';
@@ -228,6 +229,7 @@ export default function Sidebar() {
       </div>
 
       <GroupModal />
+      <GroupMembersModal />
     </>
   );
 }

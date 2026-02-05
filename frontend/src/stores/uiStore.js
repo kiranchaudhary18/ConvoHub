@@ -7,6 +7,7 @@ export const useUIStore = create((set) => ({
   showGroupModal: false,
   showInviteModal: false,
   showProfileModal: false,
+  showGroupMembersModal: false,
   typingUsers: {},
   isMobileSidebarOpen: false,
 
@@ -18,6 +19,7 @@ export const useUIStore = create((set) => ({
   setShowGroupModal: (show) => set({ showGroupModal: show }),
   setShowInviteModal: (show) => set({ showInviteModal: show }),
   setShowProfileModal: (show) => set({ showProfileModal: show }),
+  setShowGroupMembersModal: (show) => set({ showGroupMembersModal: show }),
 
   setTypingUser: (userId, isTyping) =>
     set((state) => ({
