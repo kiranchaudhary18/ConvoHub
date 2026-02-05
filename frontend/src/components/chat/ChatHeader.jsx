@@ -68,7 +68,7 @@ export default function ChatHeader({ chatId, onSearchToggle }) {
     <motion.div
       initial={{ y: -50 }}
       animate={{ y: 0 }}
-      className="flex items-center justify-between p-3 md:p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-gray-800 dark:to-gray-800"
+      className="flex items-center justify-between px-3 py-3 md:p-4 pt-6 md:pt-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-gray-800 dark:to-gray-800"
     >
       {/* Mobile back button */}
       <button
