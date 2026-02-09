@@ -4,16 +4,21 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { MessageCircle, Lock, Users, Zap, Globe, Shield, ArrowRight } from 'lucide-react';
+import { useAuthStore } from '@/stores/authStore';
 
 export default function Home() {
   const router = useRouter();
+  const { user } = useAuthStore();
 
+  // If user is already logged in, redirect to chat after a brief moment
   useEffect(() => {
-    const timer = setTimeout(() => {
-      router.push('/login');
-    }, 5000);
-    return () => clearTimeout(timer);
-  }, [router]);
+    if (user) {
+      const timer = setTimeout(() => {
+        router.push('/chat');
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [user, router]);
 
   const containerVariants = {
     hidden: { opacity: 0 },
