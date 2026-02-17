@@ -3,31 +3,35 @@ let mailTransporter = null;
 
 // Check if nodemailer is available and working
 let nodemailerAvailable = false;
+
 try {
   const nodemailer = require('nodemailer');
-  if (nodemailer && typeof nodemailer.createTransporter === 'function') {
+
+  if (nodemailer && typeof nodemailer.createTransport === 'function') {
     nodemailerAvailable = true;
-    
-    // Configure email transporter
-    if (process.env.NODE_ENV === 'production') {
-      // Production Gmail transporter
+
+    // Configure email transporter for both development and production
+    if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
       try {
-        mailTransporter = nodemailer.createTransporter({
-          service: 'gmail',
+        mailTransporter = nodemailer.createTransport({
+          service: process.env.EMAIL_SERVICE || 'gmail',
           auth: {
             user: process.env.EMAIL_USER,
             pass: process.env.EMAIL_PASS,
           },
         });
-        console.log('📧 Production Gmail transporter configured');
       } catch (error) {
-        console.error('Failed to configure Gmail transporter:', error);
+        console.error('❌ Failed to configure Gmail transporter:', error);
         mailTransporter = null;
       }
+    } else {
+      console.warn('⚠️ EMAIL_USER or EMAIL_PASS not configured - emails will not be sent');
     }
+  } else {
+    console.warn('⚠️ Nodemailer createTransport not available');
   }
 } catch (error) {
-  console.error('Nodemailer not available or incompatible:', error.message);
+  console.error('❌ Nodemailer not available or incompatible:', error.message);
   nodemailerAvailable = false;
 }
 
@@ -61,7 +65,7 @@ if (!mailTransporter) {
 const sendInviteEmail = async (email, inviteLink, invitedBy) => {
   try {
     console.log('sendInviteEmail called for:', email);
-    
+
     const mailOptions = {
       from: process.env.EMAIL_USER || 'noreply@convohub.com',
       to: email,
@@ -91,7 +95,7 @@ const sendInviteEmail = async (email, inviteLink, invitedBy) => {
     console.log('Sending email with transporter...');
     const result = await mailTransporter.sendMail(mailOptions);
     console.log('Email sent successfully:', result.messageId);
-    
+
     // Provide feedback based on service type
     if (result.messageId && result.messageId.startsWith('fallback-')) {
       console.log('💻 Fallback mode - email content logged for development');
@@ -100,14 +104,14 @@ const sendInviteEmail = async (email, inviteLink, invitedBy) => {
     } else {
       console.log('✅ Email sent via configured email service');
     }
-    
+
     return true;
   } catch (error) {
     console.error('=== Error sending email ===');
     console.error('Error type:', error.name);
     console.error('Error message:', error.message);
     console.error('Error code:', error.code);
-    
+
     // Always return true in development/fallback scenarios
     if (process.env.NODE_ENV === 'development') {
       console.log('📧 Development fallback - email details:');
@@ -118,7 +122,7 @@ const sendInviteEmail = async (email, inviteLink, invitedBy) => {
       console.log('This would be sent via email in production with proper Gmail setup');
       return true;  // Return true so UI shows success
     }
-    
+
     // In production, still return true to not break the invite flow
     // Real email setup should be configured for production use
     console.log('📧 Production fallback - invite link generated but email not sent');
