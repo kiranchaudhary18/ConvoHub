@@ -34,7 +34,7 @@ export const metadata = {
     siteName: 'ConvoHub',
     images: [
       {
-        url: 'https://convohub.in/opengraph-image.png',
+        url: 'https://convohub.in/convohub-image.png',
         width: 1200,
         height: 630,
         alt: 'ConvoHub - Real-time Chat Application',
@@ -45,7 +45,7 @@ export const metadata = {
     card: 'summary_large_image',
     title: 'ConvoHub - Real-time Chat',
     description: 'Premium real-time chat application',
-    images: ['https://convohub.in/opengraph-image.png'],
+    images: ['https://convohub.in/convohub-image.png'],
     creator: '@convohub',
   },
   icons: {
@@ -78,7 +78,7 @@ export default function RootLayout({ children }) {
               applicationCategory: 'CommunicationApplication',
               operatingSystem: 'Web',
               url: 'https://convohub.in',
-              image: 'https://convohub.in/opengraph-image.png',
+              image: 'https://convohub.in/convohub-image.png',
               author: {
                 '@type': 'Organization',
                 name: 'ConvoHub',
