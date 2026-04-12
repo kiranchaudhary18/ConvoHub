@@ -14,7 +14,7 @@ import { getSocket, initializeSocket } from '@/lib/socket';
 export default function UsersList({ searchQuery }) {
   const { users } = useUserStore();
   const { user: currentUser } = useAuthStore();
-  const { setChats, setActiveChat } = useChatStore();
+  const { setChats, setActiveChat, setSelectedUser } = useChatStore();
   const { setActiveTab, closeMobileSidebar } = useUIStore();
 
   // Filter out current user from the list
@@ -37,6 +37,15 @@ export default function UsersList({ searchQuery }) {
       // Refresh chats list
       const chatsResponse = await api.get('/chats');
       setChats(chatsResponse.data.chats || chatsResponse.data.data || []);
+      
+      // Find the selected user from the users store
+      const selectedUser = users.find(u => u._id === userId);
+      
+      // SET SELECTED USER FIRST (before setActiveChat) so header is ready
+      if (selectedUser) {
+        setSelectedUser(selectedUser);
+        console.log('✅ New chat - setSelectedUser called with:', selectedUser.name);
+      }
       
       // Set active chat and switch to chats tab
       setActiveChat(chat._id);

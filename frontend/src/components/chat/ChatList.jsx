@@ -152,19 +152,25 @@ export default function ChatList({ searchQuery, showGroups = false }) {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: index * 0.02 }}
               onClick={() => {
-                console.log(`\n🖱️ CHAT CLICKED: "${displayName}"`);
-                console.log('   otherMember:', otherMember);
+                // Recompute fresh to avoid stale closures
+                const freshOtherMember = getOtherMember(chat);
+                const isGroupChat = chat.isGroup ?? (chat.members?.length > 2);
                 
+                console.log(`\n🖱️ CHAT CLICKED: "${isGroupChat ? chat.name : freshOtherMember?.name || displayName}"`);
+                console.log('   freshOtherMember:', freshOtherMember);
+                
+                // SET SELECTED USER FIRST (before setActiveChat) to ensure state is ready when header re-renders
+                if (!isGroupChat && freshOtherMember) {
+                  setSelectedUser(freshOtherMember);
+                  console.log('   ✅ setSelectedUser called FIRST');
+                } else if (isGroupChat) {
+                  setSelectedUser(null);
+                  console.log('   ℹ️ Group - selectedUser cleared FIRST');
+                }
+                
+                // Then set active chat and close sidebar
                 setActiveChat(chat._id);
                 closeMobileSidebar();
-                
-                if (!isGroup && otherMember) {
-                  setSelectedUser(otherMember);
-                  console.log('   ✅ setSelectedUser called');
-                } else if (isGroup) {
-                  setSelectedUser(null);
-                  console.log('   ℹ️ Group - selectedUser cleared');
-                }
               }}
               className={`w-full p-3 rounded-lg transition-all ${
                 activeChat === chat._id

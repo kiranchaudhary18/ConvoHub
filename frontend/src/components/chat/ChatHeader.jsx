@@ -31,7 +31,7 @@ export default function ChatHeader({ chatId, onSearchToggle }) {
     console.log('\n🎨 ChatHeader useEffect triggered');
     console.log('   chatId:', chatId);
     console.log('   chat found?', !!chat);
-    console.log('   selectedUser:', selectedUser);
+    console.log('   selectedUser:', selectedUser?.name || selectedUser);
     
     if (!chat) {
       console.log('   ❌ Chat not found in store');
@@ -39,7 +39,7 @@ export default function ChatHeader({ chatId, onSearchToggle }) {
       return;
     }
 
-    // For one-to-one chats, use selectedUser (set when clicking a chat)
+    // For one-to-one chats, ALWAYS prioritize selectedUser (set when clicking a chat)
     // For group chats, use chat.name
     let displayName = '';
     let displayAvatar = '';
@@ -52,20 +52,25 @@ export default function ChatHeader({ chatId, onSearchToggle }) {
       displayAvatar = displayName;
       console.log('   📊 Group chat - name:', displayName);
     } else {
-      // One-to-one chat - use selectedUser from store
-      console.log('   🔍 One-to-one chat check:');
+      // One-to-one chat
+      console.log('   🔍 One-to-one chat:');
       
-      if (selectedUser) {
-        console.log('   ✅ selectedUser exists:', selectedUser.name);
+      // PRIMARY: Use selectedUser (this is set when user clicks a chat)
+      if (selectedUser && selectedUser._id) {
+        console.log('   ✅ Using selectedUser:', selectedUser.name);
         displayName = selectedUser.name || 'User';
         displayAvatar = displayName;
         isOnline = selectedUser.isOnline ?? false;
         lastSeen = selectedUser.lastSeen;
       } else {
-        // Fallback: try to find other member in chat (if selectedUser not set)
-        console.log('   ⚠️ selectedUser is NULL - using fallback');
-        const otherUser = chat.members?.find((m) => m._id !== currentUser?._id);
-        console.log('   Fallback member:', otherUser);
+        // FALLBACK: Try to find other member in chat.members
+        console.log('   ⚠️ selectedUser not set, using fallback');
+        const otherUser = chat.members?.find((m) => {
+          const mId = m._id ? String(m._id) : String(m);
+          const cId = currentUser?._id ? String(currentUser._id) : '';
+          return mId !== cId;
+        });
+        console.log('   Fallback member:', otherUser?.name || 'Not found');
         displayName = otherUser?.name || 'User';
         displayAvatar = displayName;
         isOnline = otherUser?.isOnline ?? false;
