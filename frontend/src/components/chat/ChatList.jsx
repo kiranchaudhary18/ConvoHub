@@ -9,7 +9,7 @@ import { formatDate, truncateMessage, getInitials } from '@/lib/utils';
 import { MessageCircle } from 'lucide-react';
 
 export default function ChatList({ searchQuery, showGroups = false }) {
-  const { chats, activeChat, setActiveChat } = useChatStore();
+  const { chats, activeChat, setActiveChat, setSelectedUser } = useChatStore();
   const { user: currentUser } = useAuthStore();
   const { users } = useUserStore();
   const { closeMobileSidebar } = useUIStore();
@@ -18,32 +18,69 @@ export default function ChatList({ searchQuery, showGroups = false }) {
   if (chats && chats.length > 0) {
     const groupChats = chats.filter(c => c.isGroup ?? (c.members?.length > 2));
     const oneToOneChats = chats.filter(c => !(c.isGroup ?? (c.members?.length > 2)));
-    console.log(`📋 ChatList [showGroups=${showGroups}]: ${chats.length} total | ${groupChats.length} groups | ${oneToOneChats.length} one-to-one | search="${searchQuery}"`);
-    if (showGroups && groupChats.length > 0) {
-      console.log('   Groups:', groupChats.map(g => ({ name: g.name, members: g.members?.length, isGroup: g.isGroup })));
-    }
+    console.log(`📋 ChatList: ${chats.length} total | ${groupChats.length} groups | ${oneToOneChats.length} one-to-one`);
+    console.log('   currentUser:', currentUser?.name, '| users store:', users?.length, 'users');
   }
 
   const getOtherMember = (chat) => {
-    if (chat.isGroup) return null;
+    if (chat.isGroup || !chat.members || chat.members.length < 2) return null;
     
-    // Handle case where members might be IDs (strings) or objects
     const members = chat.members || [];
+    const currentUserId = currentUser?._id ? String(currentUser._id) : '';
+    const currentUserName = currentUser?.name || '';
     
-    for (let member of members) {
-      const memberId = typeof member === 'object' && member?._id ? member._id : member;
+    console.log(`\n🔎 getOtherMember for chat ${chat._id.slice(0, 5)}`);
+    console.log('   Current User:', { id: currentUserId.slice(0, 5), name: currentUserName });
+    console.log('   Members count:', members.length);
+    
+    // Try to find a member that is NOT the current user
+    for (let i = 0; i < members.length; i++) {
+      const member = members[i];
+      if (!member) continue;
       
-      // If this is not the current user, return them
-      if (memberId !== currentUser?._id) {
-        // Return the member object if available, otherwise create one from the ID
-        if (typeof member === 'object' && member?._id) {
-          return member;
-        } else {
-          return { _id: memberId, name: 'User' };
+      const memberId = member._id ? String(member._id) : String(member);
+      const memberName = member.name || 'Unknown';
+      
+      console.log(`   [${i}] ID: ${memberId.slice(0, 5)}, Name: ${memberName}`);
+      
+      // Safety check #1: Skip if ID matches current user
+      if (memberId === currentUserId) {
+        console.log(`       → Skip (ID match)`);
+        continue;
+      }
+      
+      // Safety check #2: Skip if name matches current user
+      if (memberName === currentUserName) {
+        console.log(`       → Skip (Name match)`);
+        continue;
+      }
+      
+      // This should be the other user!
+      if (member.name) {
+        console.log(`   ✅ Selected: ${memberName}`);
+        return member;
+      }
+    }
+    
+    // Last resort: Use UserStore to find non-current users
+    console.log('   No direct match found, trying UserStore...');
+    if (users && users.length > 0) {
+      for (let member of members) {
+        const memberId = member._id ? String(member._id) : String(member);
+        
+        // Skip current user
+        if (memberId === currentUserId) continue;
+        
+        // Find in users store
+        const foundUser = users.find(u => String(u._id) === memberId);
+        if (foundUser && foundUser.name !== currentUserName) {
+          console.log(`   ✅ Found in store: ${foundUser.name}`);
+          return foundUser;
         }
       }
     }
     
+    console.log('   ❌ No other member found');
     return null;
   };
 
@@ -103,7 +140,6 @@ export default function ChatList({ searchQuery, showGroups = false }) {
         </div>
       ) : (
         displayList.map((chat, index) => {
-          // Ensure isGroup is set
           const isGroup = chat.isGroup ?? (chat.members?.length > 2);
           const otherMember = getOtherMember(chat);
           const displayName = isGroup ? chat.name : otherMember?.name || 'Unknown';
@@ -116,8 +152,19 @@ export default function ChatList({ searchQuery, showGroups = false }) {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: index * 0.02 }}
               onClick={() => {
+                console.log(`\n🖱️ CHAT CLICKED: "${displayName}"`);
+                console.log('   otherMember:', otherMember);
+                
                 setActiveChat(chat._id);
                 closeMobileSidebar();
+                
+                if (!isGroup && otherMember) {
+                  setSelectedUser(otherMember);
+                  console.log('   ✅ setSelectedUser called');
+                } else if (isGroup) {
+                  setSelectedUser(null);
+                  console.log('   ℹ️ Group - selectedUser cleared');
+                }
               }}
               className={`w-full p-3 rounded-lg transition-all ${
                 activeChat === chat._id

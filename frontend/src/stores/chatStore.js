@@ -4,10 +4,14 @@ export const useChatStore = create((set) => ({
   chats: [],
   messages: {},
   activeChat: null,
+  selectedUser: null, // Store the currently selected chat participant (for 1-to-1 chats)
   selectedUsers: [],
   loading: false,
 
   setChats: (chats) => set({ chats }),
+  
+  // Set the selected user for the active chat (fixes header display)
+  setSelectedUser: (user) => set({ selectedUser: user }),
   
   addChatToList: (newChat) =>
     set((state) => {

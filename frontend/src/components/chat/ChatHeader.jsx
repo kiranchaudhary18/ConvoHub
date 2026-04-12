@@ -9,7 +9,7 @@ import { getInitials, formatLastSeen } from '@/lib/utils';
 import { Menu, ArrowLeft, Search, Users } from 'lucide-react';
 
 export default function ChatHeader({ chatId, onSearchToggle }) {
-  const { chats, activeChat, setActiveChat } = useChatStore();
+  const { chats, activeChat, setActiveChat, selectedUser, setSelectedUser } = useChatStore();
   const { user: currentUser } = useAuthStore();
   const { toggleMobileSidebar, isMobileSidebarOpen, setShowGroupMembersModal } = useUIStore();
   const [headerData, setHeaderData] = useState(null);
@@ -17,6 +17,7 @@ export default function ChatHeader({ chatId, onSearchToggle }) {
   const handleBackClick = () => {
     // On mobile, close current chat to show sidebar
     setActiveChat(null);
+    setSelectedUser(null);  // Clear selected user when going back
   };
 
   const handleShowGroupMembers = () => {
@@ -27,19 +28,54 @@ export default function ChatHeader({ chatId, onSearchToggle }) {
     // Get the current chat
     const chat = (chats || []).find((c) => c._id === chatId);
     
+    console.log('\n🎨 ChatHeader useEffect triggered');
+    console.log('   chatId:', chatId);
+    console.log('   chat found?', !!chat);
+    console.log('   selectedUser:', selectedUser);
+    
     if (!chat) {
+      console.log('   ❌ Chat not found in store');
       setHeaderData(null);
       return;
     }
 
-    // For one-to-one chats, find the other user (not the current user)
-    const otherUser = chat.isGroup ? null : chat.members.find((m) => m._id !== currentUser?._id);
-    
-    // Set header data
-    const displayName = chat.isGroup ? chat.name : (otherUser?.name || 'User');
-    const displayAvatar = displayName || 'CH';
-    const isOnline = otherUser?.isOnline ?? false;
-    const lastSeen = otherUser?.lastSeen;
+    // For one-to-one chats, use selectedUser (set when clicking a chat)
+    // For group chats, use chat.name
+    let displayName = '';
+    let displayAvatar = '';
+    let isOnline = false;
+    let lastSeen = null;
+
+    if (chat.isGroup) {
+      // Group chat
+      displayName = chat.name || 'Group';
+      displayAvatar = displayName;
+      console.log('   📊 Group chat - name:', displayName);
+    } else {
+      // One-to-one chat - use selectedUser from store
+      console.log('   🔍 One-to-one chat check:');
+      
+      if (selectedUser) {
+        console.log('   ✅ selectedUser exists:', selectedUser.name);
+        displayName = selectedUser.name || 'User';
+        displayAvatar = displayName;
+        isOnline = selectedUser.isOnline ?? false;
+        lastSeen = selectedUser.lastSeen;
+      } else {
+        // Fallback: try to find other member in chat (if selectedUser not set)
+        console.log('   ⚠️ selectedUser is NULL - using fallback');
+        const otherUser = chat.members?.find((m) => m._id !== currentUser?._id);
+        console.log('   Fallback member:', otherUser);
+        displayName = otherUser?.name || 'User';
+        displayAvatar = displayName;
+        isOnline = otherUser?.isOnline ?? false;
+        lastSeen = otherUser?.lastSeen;
+      }
+    }
+
+    console.log('   Final displayName:', displayName);
+    console.log('   Final isOnline:', isOnline);
+    console.log('');
 
     setHeaderData({
       displayName,
@@ -49,7 +85,7 @@ export default function ChatHeader({ chatId, onSearchToggle }) {
       isGroup: chat.isGroup,
       memberCount: chat.members?.length
     });
-  }, [chatId, chats, currentUser]);
+  }, [chatId, chats, currentUser, selectedUser]);
   
   const getStatusText = () => {
     if (!headerData) return '';
