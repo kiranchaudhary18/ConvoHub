@@ -46,7 +46,14 @@ const createOrGetOneToOneChat = async (req, res) => {
       members: [userId, recipientId],
     });
 
-    chat = await chat.populate('members', '-password');
+    // Populate before returning
+    await chat.populate('members', '-password');
+    await chat.populate('lastMessage');
+
+    console.log('✅ New chat created:', {
+      chatId: chat._id,
+      members: chat.members.map(m => ({ _id: m._id, name: m.name }))
+    });
 
     // Emit socket event to notify new chat to both users
     const io = req.app.get('io');
@@ -154,21 +161,26 @@ const getAllChats = async (req, res) => {
       .populate('admin', '-password')
       .sort({ updatedAt: -1 });
 
-    // Debug: Log first chat structure
+    // Debug: Log detailed chat structure
+    console.log('\n🔧 getAllChats - Debug Info:');
+    console.log('Total chats:', chats.length);
+    
     if (chats.length > 0) {
-      console.log('getAllChats Debug - First chat:', {
-        chatId: chats[0]._id,
+      console.log('First chat details:', {
+        _id: chats[0]._id,
         isGroup: chats[0].isGroup,
-        memberCount: chats[0].members?.length,
-        firstMember: chats[0].members?.[0] ? {
-          _id: chats[0].members[0]._id,
-          name: chats[0].members[0].name,
-          email: chats[0].members[0].email,
-          type: typeof chats[0].members[0],
-          keys: Object.keys(chats[0].members[0] || {}).slice(0, 5)
-        } : null
+        name: chats[0].name,
+        members: chats[0].members ? chats[0].members.map(m => ({
+          _id: m?._id,
+          name: m?.name,
+          email: m?.email,
+          type: typeof m,
+          isObject: typeof m === 'object'
+        })) : 'NO MEMBERS',
+        memberCount: chats[0].members?.length
       });
     }
+    console.log('');
 
     return res.status(200).json({
       success: true,
